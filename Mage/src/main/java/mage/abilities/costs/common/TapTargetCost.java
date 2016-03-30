@@ -27,9 +27,9 @@
  */
 package mage.abilities.costs.common;
 
-import java.util.List;
 import java.util.UUID;
 import mage.abilities.Ability;
+import mage.abilities.costs.Cost;
 import mage.abilities.costs.CostImpl;
 import mage.constants.Outcome;
 import mage.game.Game;
@@ -51,7 +51,7 @@ public class TapTargetCost extends CostImpl {
         this.text
                 = new StringBuilder("Tap ")
                 .append((target.getTargetName().startsWith("a ") || target.getTargetName().startsWith("an ") || target.getTargetName().startsWith("another"))
-                                ? "" : CardUtil.numberToText(target.getMaxNumberOfTargets()) + " ")
+                        ? "" : CardUtil.numberToText(target.getMaxNumberOfTargets()) + " ")
                 .append(target.getTargetName()).toString();
     }
 
@@ -61,9 +61,9 @@ public class TapTargetCost extends CostImpl {
     }
 
     @Override
-    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana) {
+    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana, Cost costToPay) {
         if (target.choose(Outcome.Tap, controllerId, sourceId, game)) {
-            for (UUID targetId : (List<UUID>) target.getTargets()) {
+            for (UUID targetId : target.getTargets()) {
                 Permanent permanent = game.getPermanent(targetId);
                 if (permanent == null) {
                     return false;

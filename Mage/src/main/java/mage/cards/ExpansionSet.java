@@ -67,7 +67,7 @@ public abstract class ExpansionSet implements Serializable {
     protected int ratioBoosterMythic;
 
     protected String packageName;
-    protected int maxCardNumberInBooster;
+    protected int maxCardNumberInBooster; // used to ommit cards with collector numbers beyond the regular cards in a set for boosters
 
     protected final EnumMap<Rarity, List<CardInfo>> savedCards;
 
@@ -156,7 +156,7 @@ public abstract class ExpansionSet implements Serializable {
             List<CardInfo> specialLands = getSpecialLand();
             List<CardInfo> basicLands = getCardsByRarity(Rarity.LAND);
             for (int i = 0; i < numBoosterLands; i++) {
-                if (ratioBoosterSpecialLand > 0 && rnd.nextInt(ratioBoosterSpecialLand) == 1 && specialLands != null) {
+                if (ratioBoosterSpecialLand > 0 && rnd.nextInt(ratioBoosterSpecialLand) == 0 && specialLands != null) {
                     addToBooster(booster, specialLands);
                 } else {
                     addToBooster(booster, basicLands);
@@ -174,7 +174,7 @@ public abstract class ExpansionSet implements Serializable {
         List<CardInfo> rares = getCardsByRarity(Rarity.RARE);
         List<CardInfo> mythics = getCardsByRarity(Rarity.MYTHIC);
         for (int i = 0; i < numBoosterRare; i++) {
-            if (ratioBoosterMythic > 0 && rnd.nextInt(ratioBoosterMythic) == 1) {
+            if (ratioBoosterMythic > 0 && rnd.nextInt(ratioBoosterMythic) == 0) {
                 addToBooster(booster, mythics);
             } else {
                 addToBooster(booster, rares);
@@ -304,7 +304,7 @@ public abstract class ExpansionSet implements Serializable {
             savedCardsInfos = CardRepository.instance.findCards(criteria);
             savedCards.put(rarity, savedCardsInfos);
         }
-        // Return a copy of the saved cards information, as not to modify the original.
+        // Return a copy of the saved cards information, as not to let modify the original.
         return new ArrayList<>(savedCardsInfos);
     }
 

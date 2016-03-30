@@ -29,11 +29,11 @@ package mage.sets.magic2015;
 
 import java.util.UUID;
 import mage.ConditionalMana;
-import mage.MageInt;
 import mage.MageObject;
 import mage.Mana;
 import mage.abilities.Ability;
 import mage.abilities.condition.common.PermanentsOnTheBattlefieldCondition;
+import mage.abilities.costs.Cost;
 import mage.abilities.costs.common.TapSourceCost;
 import mage.abilities.costs.mana.GenericManaCost;
 import mage.abilities.decorator.ConditionalActivatedAbility;
@@ -74,7 +74,7 @@ public class SliverHive extends CardImpl {
         super(ownerId, 247, "Sliver Hive", Rarity.RARE, new CardType[]{CardType.LAND}, "");
         this.expansionSetCode = "M15";
 
-        // {T}: Add {1} to your mana pool.
+        // {T}: Add {C} to your mana pool.
         this.addAbility(new ColorlessManaAbility());
 
         // {T}: Add one mana of any color to your mana pool. Spend this mana only to cast a Sliver spell.
@@ -124,7 +124,7 @@ class SliverHiveConditionalMana extends ConditionalMana {
 class SliverHiveManaCondition extends CreatureCastManaCondition {
 
     @Override
-    public boolean apply(Game game, Ability source, UUID manaProducer) {
+    public boolean apply(Game game, Ability source, UUID manaProducer, Cost costToPay) {
         if (super.apply(game, source)) {
             MageObject object = game.getObject(source.getSourceId());
             if (object.hasSubtype("Sliver")) {

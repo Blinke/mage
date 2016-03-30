@@ -45,13 +45,11 @@ import mage.constants.Outcome;
 import mage.constants.Rarity;
 import mage.constants.TargetController;
 import mage.constants.WatcherScope;
-import mage.constants.Zone;
 import mage.filter.FilterCard;
 import mage.filter.predicate.Predicate;
 import mage.game.Game;
 import mage.game.events.GameEvent;
 import mage.players.Player;
-import mage.target.TargetCard;
 import mage.target.common.TargetCardInHand;
 import mage.watchers.Watcher;
 
@@ -105,8 +103,9 @@ class SylvanLibraryEffect extends OneShotEffect {
             CardsDrawnThisTurnWatcher watcher = (CardsDrawnThisTurnWatcher) game.getState().getWatchers().get("CardsDrawnThisTurnWatcher");
             if (watcher != null) {
                 Cards cards = new CardsImpl();
+                Set<UUID> cardsDrawnThisTurn = watcher.getCardsDrawnThisTurn(controller.getId());
                 for (UUID cardId : controller.getHand()) {
-                    if (watcher.getCardsDrawnThisTurn(controller.getId()).contains(cardId)) {
+                    if (cardsDrawnThisTurn != null && cardsDrawnThisTurn.contains(cardId)) {
                         Card card = game.getCard(cardId);
                         if (card != null) {
                             cards.add(card);
@@ -134,26 +133,7 @@ class SylvanLibraryEffect extends OneShotEffect {
                             }
                         }
                     }
-                    int numberOfCardsToPutBack = cardsPutBack.size();
-                    if (numberOfCardsToPutBack > 1) {
-                        TargetCard target2 = new TargetCard(Zone.PICK, new FilterCard("card to put on the top of your library (last chosen will be on top)"));
-                        while (controller.canRespond() && cardsPutBack.size() > 1) {
-                            controller.choose(Outcome.Benefit, cardsPutBack, target2, game);
-                            Card card = cardsPutBack.get(target2.getFirstTarget(), game);
-                            if (card != null) {
-                                cardsPutBack.remove(card);
-                                card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, true);
-                            }
-                            target2.clearChosen();
-                        }
-                    }
-                    if (cardsPutBack.size() == 1) {
-                        Card card = cardsPutBack.get(cardsPutBack.iterator().next(), game);
-                        card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, true);
-                    }
-                    if (numberOfCardsToPutBack > 0) {
-                        game.informPlayers(controller.getLogName() + " puts " + numberOfCardsToPutBack + " card(s) back to library");
-                    }
+                    controller.putCardsOnTopOfLibrary(cardsPutBack, game, source, applyEffectsAfter);
                 }
             }
             return true;

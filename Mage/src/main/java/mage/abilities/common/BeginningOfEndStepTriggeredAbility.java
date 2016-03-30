@@ -75,7 +75,7 @@ public class BeginningOfEndStepTriggeredAbility extends TriggeredAbilityImpl {
             case YOU:
                 boolean yours = event.getPlayerId().equals(this.controllerId);
                 if (yours) {
-                    if (getTargets().size() == 0) {
+                    if (getTargets().isEmpty()) {
                         for (Effect effect : this.getEffects()) {
                             effect.setTargetPointer(new FixedTarget(event.getPlayerId()));
                         }
@@ -84,7 +84,7 @@ public class BeginningOfEndStepTriggeredAbility extends TriggeredAbilityImpl {
                 return yours;
             case OPPONENT:
                 if (game.getPlayer(this.controllerId).hasOpponent(event.getPlayerId(), game)) {
-                    if (getTargets().size() == 0) {
+                    if (getTargets().isEmpty()) {
                         for (Effect effect : this.getEffects()) {
                             effect.setTargetPointer(new FixedTarget(event.getPlayerId()));
                         }
@@ -94,7 +94,7 @@ public class BeginningOfEndStepTriggeredAbility extends TriggeredAbilityImpl {
                 break;
             case ANY:
             case NEXT:
-                if (getTargets().size() == 0) {
+                if (getTargets().isEmpty()) {
                     for (Effect effect : this.getEffects()) {
                         effect.setTargetPointer(new FixedTarget(event.getPlayerId()));
                     }
@@ -105,7 +105,7 @@ public class BeginningOfEndStepTriggeredAbility extends TriggeredAbilityImpl {
                 if (attachment != null && attachment.getAttachedTo() != null) {
                     Permanent attachedTo = game.getPermanent(attachment.getAttachedTo());
                     if (attachedTo != null && attachedTo.getControllerId().equals(event.getPlayerId())) {
-                        if (getTargets().size() == 0) {
+                        if (getTargets().isEmpty()) {
                             for (Effect effect : this.getEffects()) {
                                 effect.setTargetPointer(new FixedTarget(event.getPlayerId()));
                             }
@@ -135,17 +135,21 @@ public class BeginningOfEndStepTriggeredAbility extends TriggeredAbilityImpl {
                 sb.insert(0, "you may ");
             }
         }
+        String abilityWordRule = "";
+        if (abilityWord != null) {
+            abilityWordRule = "<i>" + abilityWord.toString() + "</i> &mdash ";
+        }
         switch (targetController) {
             case YOU:
-                return sb.insert(0, generateConditionString()).insert(0, "At the beginning of your end step, ").toString();
+                return sb.insert(0, generateConditionString()).insert(0, abilityWordRule + "At the beginning of your end step, ").toString();
             case NEXT:
-                return sb.insert(0, generateConditionString()).insert(0, "At the beginning of the end step, ").toString();
+                return sb.insert(0, generateConditionString()).insert(0, abilityWordRule + "At the beginning of the end step, ").toString();
             case OPPONENT:
-                return sb.insert(0, generateConditionString()).insert(0, "At the beginning of each opponent's end step, ").toString();
+                return sb.insert(0, generateConditionString()).insert(0, abilityWordRule + "At the beginning of each opponent's end step, ").toString();
             case ANY:
-                return sb.insert(0, generateConditionString()).insert(0, "At the beginning of each end step, ").toString();
+                return sb.insert(0, generateConditionString()).insert(0, abilityWordRule + "At the beginning of each end step, ").toString();
             case CONTROLLER_ATTACHED_TO:
-                return sb.insert(0, generateConditionString()).insert(0, "At the beginning of the end step of enchanted creature's controller, ").toString();
+                return sb.insert(0, generateConditionString()).insert(0, abilityWordRule + "At the beginning of the end step of enchanted creature's controller, ").toString();
         }
         return "";
     }

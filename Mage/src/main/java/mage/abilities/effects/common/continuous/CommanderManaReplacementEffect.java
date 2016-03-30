@@ -42,11 +42,13 @@ import mage.game.events.ManaEvent;
  *
  * @author LevelX
  */
-
 //20130711
 /*
  * 903.9. If mana would be added to a player's mana pool of a color that isn't in the color identity
  * of that player's commander, that amount of colorless mana is added to that player's mana pool instead.
+ *
+ * Commander rule #4 was removed Jan. 18, 2016 
+ *
  */
 public class CommanderManaReplacementEffect extends ReplacementEffectImpl {
 
@@ -81,31 +83,31 @@ public class CommanderManaReplacementEffect extends ReplacementEffectImpl {
         Mana mana = ((ManaEvent) event).getMana();
         if (mana.getBlack() > 0 && !commanderMana.isBlack()) {
             for (int i = 0; i < mana.getBlack(); i++) {
-                mana.increaseColorless();
+                mana.increaseGeneric();
             }
             mana.setBlack(0);
         }
         if (mana.getBlue() > 0 && !commanderMana.isBlue()) {
             for (int i = 0; i < mana.getBlue(); i++) {
-                mana.increaseColorless();
+                mana.increaseGeneric();
             }
             mana.setBlue(0);
         }
         if (mana.getGreen() > 0 && !commanderMana.isGreen()) {
             for (int i = 0; i < mana.getGreen(); i++) {
-                mana.increaseColorless();
+                mana.increaseGeneric();
             }
             mana.setGreen(0);
         }
         if (mana.getRed() > 0 && !commanderMana.isRed()) {
             for (int i = 0; i < mana.getRed(); i++) {
-                mana.increaseColorless();
+                mana.increaseGeneric();
             }
             mana.setRed(0);
         }
         if (mana.getWhite() > 0 && !commanderMana.isWhite()) {
             for (int i = 0; i < mana.getWhite(); i++) {
-                mana.increaseColorless();
+                mana.increaseGeneric();
             }
             mana.setWhite(0);
         }

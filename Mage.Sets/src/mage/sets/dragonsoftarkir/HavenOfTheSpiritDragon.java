@@ -33,6 +33,7 @@ import mage.MageObject;
 import mage.Mana;
 import mage.abilities.Ability;
 import mage.abilities.common.SimpleActivatedAbility;
+import mage.abilities.costs.Cost;
 import mage.abilities.costs.common.SacrificeSourceCost;
 import mage.abilities.costs.common.TapSourceCost;
 import mage.abilities.costs.mana.ManaCostsImpl;
@@ -69,7 +70,7 @@ public class HavenOfTheSpiritDragon extends CardImpl {
         super(ownerId, 249, "Haven of the Spirit Dragon", Rarity.RARE, new CardType[]{CardType.LAND}, "");
         this.expansionSetCode = "DTK";
 
-        // {T}: Add {1} to your mana pool.
+        // {T}: Add {C} to your mana pool.
         this.addAbility(new ColorlessManaAbility());
 
         // {T}: add one mana of any color to your mana pool. Spend this mana only to cast a Dragon creature spell.
@@ -120,7 +121,7 @@ class HavenOfTheSpiritConditionalMana extends ConditionalMana {
 class HavenOfTheSpiritManaCondition extends CreatureCastManaCondition {
 
     @Override
-    public boolean apply(Game game, Ability source, UUID manaProducer) {
+    public boolean apply(Game game, Ability source, UUID manaProducer, Cost costToPay) {
         if (super.apply(game, source)) {
             MageObject object = game.getObject(source.getSourceId());
             if (object.hasSubtype("Dragon")

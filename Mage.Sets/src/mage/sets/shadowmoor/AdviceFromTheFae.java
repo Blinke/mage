@@ -27,10 +27,12 @@
  */
 package mage.sets.shadowmoor;
 
+import java.util.Set;
 import java.util.UUID;
 import mage.MageObject;
 import mage.abilities.Ability;
 import mage.abilities.effects.OneShotEffect;
+import mage.cards.Card;
 import mage.cards.CardImpl;
 import mage.cards.Cards;
 import mage.cards.CardsImpl;
@@ -93,10 +95,14 @@ class AdviceFromTheFaeEffect extends OneShotEffect {
         Player controller = game.getPlayer(source.getControllerId());
         MageObject mageObject = game.getObject(source.getSourceId());
         if (controller != null) {
-            Cards cardsFromLibrary = new CardsImpl(Zone.LIBRARY, controller.getLibrary().getTopCards(game, 5));
+            Set<Card> topCards = controller.getLibrary().getTopCards(game, 5);
+            Cards cardsFromLibrary = new CardsImpl();
+            for (Card card : topCards) {
+                cardsFromLibrary.add(card);
+            }
             controller.lookAtCards(mageObject.getIdName(), cardsFromLibrary, game);
             int max = 0;
-            for (UUID playerId : controller.getInRange()) {
+            for (UUID playerId : game.getState().getPlayersInRange(controller.getId(), game)) {
                 FilterCreaturePermanent filter = new FilterCreaturePermanent();
                 filter.add(new ControllerIdPredicate(playerId));
                 if (playerId != controller.getId()) {

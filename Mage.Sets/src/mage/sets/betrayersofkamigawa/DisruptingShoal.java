@@ -32,11 +32,12 @@ import mage.ObjectColor;
 import mage.abilities.Ability;
 import mage.abilities.Mode;
 import mage.abilities.costs.AlternativeCostSourceAbility;
+import mage.abilities.costs.Cost;
 import mage.abilities.costs.common.ExileFromHandCost;
-import mage.abilities.dynamicvalue.DynamicValue;
-import mage.abilities.dynamicvalue.common.ExileFromHandCostCardConvertedMana;
 import mage.abilities.effects.OneShotEffect;
+import mage.cards.Card;
 import mage.cards.CardImpl;
+import mage.cards.SplitCard;
 import mage.constants.CardType;
 import mage.constants.Outcome;
 import mage.constants.Rarity;
@@ -59,7 +60,6 @@ public class DisruptingShoal extends CardImpl {
         super(ownerId, 33, "Disrupting Shoal", Rarity.RARE, new CardType[]{CardType.INSTANT}, "{X}{U}{U}");
         this.expansionSetCode = "BOK";
         this.subtype.add("Arcane");
-
 
         // You may exile a blue card with converted mana cost X from your hand rather than pay Disrupting Shoal's mana cost.
         FilterOwnedCard filter = new FilterOwnedCard("a blue card with converted mana cost X from your hand");
@@ -100,12 +100,33 @@ class DisruptingShoalCounterTargetEffect extends OneShotEffect {
 
     @Override
     public boolean apply(Game game, Ability source) {
-        DynamicValue amount = new ExileFromHandCostCardConvertedMana();
         Spell spell = game.getStack().getSpell(targetPointer.getFirst(game, source));
-        if (spell != null && spell.getConvertedManaCost() == amount.calculate(game, source, this)) {
+        if (spell != null && isConvertedManaCostEqual(source, spell.getConvertedManaCost())) {
             return game.getStack().counter(source.getFirstTarget(), source.getSourceId(), game);
         }
         return false;
+    }
+
+    private boolean isConvertedManaCostEqual(Ability sourceAbility, int amount) {
+        for (Cost cost : sourceAbility.getCosts()) {
+            if (cost.isPaid() && cost instanceof ExileFromHandCost) {
+                for (Card card : ((ExileFromHandCost) cost).getCards()) {
+                    if (card instanceof SplitCard) {
+                        if (((SplitCard) card).getLeftHalfCard().getManaCost().convertedManaCost() == amount) {
+                            return true;
+                        }
+                        if (((SplitCard) card).getRightHalfCard().getManaCost().convertedManaCost() == amount) {
+                            return true;
+                        }
+                    } else if (card.getManaCost().convertedManaCost() == amount) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        // No alternate costs payed so compare to X value
+        return sourceAbility.getManaCostsToPay().getX() == amount;
     }
 
     @Override

@@ -31,6 +31,7 @@ import java.util.UUID;
 import mage.MageInt;
 import mage.abilities.Ability;
 import mage.abilities.common.SimpleActivatedAbility;
+import mage.abilities.costs.Cost;
 import mage.abilities.costs.CostImpl;
 import mage.abilities.effects.Effect;
 import mage.abilities.effects.common.continuous.BecomesCreatureSourceEffect;
@@ -55,7 +56,7 @@ public class LurkingEvil extends CardImpl {
         this.expansionSetCode = "USG";
 
         // Pay half your life, rounded up: Lurking Evil becomes a 4/4 Horror creature with flying.
-        Effect effect = new BecomesCreatureSourceEffect(new LurkingEvilToken(), null, Duration.EndOfGame, true);
+        Effect effect = new BecomesCreatureSourceEffect(new LurkingEvilToken(), null, Duration.EndOfGame, true, false);
         effect.setText("{this} becomes a 4/4 Horror creature with flying");
         this.addAbility(new SimpleActivatedAbility(Zone.BATTLEFIELD, effect, new LurkingEvilCost()));
     }
@@ -87,15 +88,14 @@ class LurkingEvilCost extends CostImpl {
     }
 
     @Override
-    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana) {
+    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana, Cost costToPay) {
         Player controller = game.getPlayer(controllerId);
         if (controller != null) {
             int currentLife = controller.getLife();
-            int lifeToPay = (currentLife + currentLife%2) / 2; // Divide by two and round up.
+            int lifeToPay = (currentLife + currentLife % 2) / 2; // Divide by two and round up.
             if (lifeToPay < 0) {
                 this.paid = true;
-            }
-            else {
+            } else {
                 this.paid = (controller.loseLife(lifeToPay, game) == lifeToPay);
             }
             return this.paid;

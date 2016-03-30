@@ -29,6 +29,7 @@ package mage.abilities.effects;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -71,7 +72,16 @@ public abstract class ContinuousEffectImpl extends EffectImpl implements Continu
     protected boolean affectedObjectsSet = false;
     protected List<MageObjectReference> affectedObjectList = new ArrayList<>();
     protected boolean temporary = false;
-    protected EnumSet<DependencyType> dependencyTypes;
+    protected EnumSet<DependencyType> dependencyTypes; // this effect has the dependencyTypes defined here
+    protected DependencyType dependendToType; // this effect is dependent to this type
+    /*
+     A Characteristic Defining Ability (CDA) is an ability that defines a characteristic of a card or token.
+     There are 3 specific rules that distinguish a CDA from other abilities.
+     1) A CDA can only define a characteristic of either the card or token it comes from.
+     2) A CDA can not be triggered, activated, or conditional.
+     3) A CDA must define a characteristic. Usually color, power and/or toughness, or sub-type.
+     */
+    protected boolean characterDefining = false;
 
     // until your next turn
     protected int startingTurn;
@@ -83,6 +93,7 @@ public abstract class ContinuousEffectImpl extends EffectImpl implements Continu
         this.order = 0;
         this.effectType = EffectType.CONTINUOUS;
         this.dependencyTypes = EnumSet.noneOf(DependencyType.class);
+        this.dependendToType = null;
     }
 
     public ContinuousEffectImpl(Duration duration, Layer layer, SubLayer sublayer, Outcome outcome) {
@@ -105,6 +116,7 @@ public abstract class ContinuousEffectImpl extends EffectImpl implements Continu
         this.startingTurn = effect.startingTurn;
         this.startingControllerId = effect.startingControllerId;
         this.dependencyTypes = effect.dependencyTypes;
+        this.characterDefining = effect.characterDefining;
     }
 
     @Override
@@ -179,12 +191,10 @@ public abstract class ContinuousEffectImpl extends EffectImpl implements Continu
                     case PTChangingEffects_7:
                         this.affectedObjectsSet = true;
                 }
-            } else {
-                if (hasLayer(Layer.CopyEffects_1) || hasLayer(Layer.ControlChangingEffects_2) || hasLayer(Layer.TextChangingEffects_3)
-                        || hasLayer(Layer.TypeChangingEffects_4) || hasLayer(Layer.ColorChangingEffects_5) || hasLayer(Layer.AbilityAddingRemovingEffects_6)
-                        || hasLayer(Layer.PTChangingEffects_7)) {
-                    this.affectedObjectsSet = true;
-                }
+            } else if (hasLayer(Layer.CopyEffects_1) || hasLayer(Layer.ControlChangingEffects_2) || hasLayer(Layer.TextChangingEffects_3)
+                    || hasLayer(Layer.TypeChangingEffects_4) || hasLayer(Layer.ColorChangingEffects_5) || hasLayer(Layer.AbilityAddingRemovingEffects_6)
+                    || hasLayer(Layer.PTChangingEffects_7)) {
+                this.affectedObjectsSet = true;
             }
         }
         startingTurn = game.getTurnNum();
@@ -256,14 +266,45 @@ public abstract class ContinuousEffectImpl extends EffectImpl implements Continu
         this.temporary = temporary;
     }
 
+    public boolean isCharacterDefining() {
+        return characterDefining;
+    }
+
+    public void setCharacterDefining(boolean characterDefining) {
+        this.characterDefining = characterDefining;
+    }
+
     @Override
     public Set<UUID> isDependentTo(List<ContinuousEffect> allEffectsInLayer) {
+        if (dependendToType != null) {
+            // the dependent classes needs to be an enclosed class for dependent check of continuous effects
+            Set<UUID> dependentTo = null;
+            for (ContinuousEffect effect : allEffectsInLayer) {
+                if (effect.getDependencyTypes().contains(dependendToType)) {
+                    if (dependentTo == null) {
+                        dependentTo = new HashSet<>();
+                    }
+                    dependentTo.add(effect.getId());
+                }
+            }
+            return dependentTo;
+        }
         return null;
     }
 
     @Override
     public EnumSet<DependencyType> getDependencyTypes() {
         return dependencyTypes;
+    }
+
+    @Override
+    public void addDependencyType(DependencyType dependencyType) {
+        dependencyTypes.add(dependencyType);
+    }
+
+    @Override
+    public void setDependedToType(DependencyType dependencyType) {
+        dependendToType = dependencyType;
     }
 
 }

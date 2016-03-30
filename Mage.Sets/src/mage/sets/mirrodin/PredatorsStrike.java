@@ -28,14 +28,14 @@
 package mage.sets.mirrodin;
 
 import java.util.UUID;
-
-import mage.constants.CardType;
-import mage.constants.Rarity;
+import mage.abilities.effects.Effect;
 import mage.abilities.effects.common.continuous.BoostTargetEffect;
 import mage.abilities.effects.common.continuous.GainAbilityTargetEffect;
 import mage.abilities.keyword.TrampleAbility;
 import mage.cards.CardImpl;
+import mage.constants.CardType;
 import mage.constants.Duration;
+import mage.constants.Rarity;
 import mage.target.common.TargetCreaturePermanent;
 
 /**
@@ -48,8 +48,12 @@ public class PredatorsStrike extends CardImpl {
         super(ownerId, 128, "Predator's Strike", Rarity.COMMON, new CardType[]{CardType.INSTANT}, "{1}{G}");
         this.expansionSetCode = "MRD";
 
-        this.getSpellAbility().addEffect(new BoostTargetEffect(3, 3, Duration.EndOfTurn));
-        this.getSpellAbility().addEffect(new GainAbilityTargetEffect(TrampleAbility.getInstance(), Duration.EndOfTurn));
+        Effect effect = new BoostTargetEffect(3, 3, Duration.EndOfTurn);
+        effect.setText("Target creature gets +3/+3");
+        this.getSpellAbility().addEffect(effect);
+        effect = new GainAbilityTargetEffect(TrampleAbility.getInstance(), Duration.EndOfTurn);
+        effect.setText("and gains trample until end of turn");
+        this.getSpellAbility().addEffect(effect);
         this.getSpellAbility().addTarget(new TargetCreaturePermanent());
     }
 

@@ -89,20 +89,19 @@ class GlimpseTheFutureEffect extends OneShotEffect {
         Player controller = game.getPlayer(source.getControllerId());
 
         if (controller != null) {
-            Cards cards = new CardsImpl(Zone.PICK);
+            Cards cards = new CardsImpl();
             int cardsCount = Math.min(3, controller.getLibrary().size());
             for (int i = 0; i < cardsCount; i++) {
                 Card card = controller.getLibrary().removeFromTop(game);
                 if (card != null) {
                     cards.add(card);
-                    game.setZone(card.getId(), Zone.PICK);
                 }
             }
 
             if (cards.size() > 0) {
                 controller.lookAtCards("Glimpse the Future", cards, game);
 
-                TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put in your hand"));
+                TargetCard target = new TargetCard(Zone.LIBRARY, new FilterCard("card to put in your hand"));
                 if (controller.choose(Outcome.Benefit, cards, target, game)) {
                     Card card = cards.get(target.getFirstTarget(), game);
                     if (card != null) {

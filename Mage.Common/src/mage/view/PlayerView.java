@@ -83,6 +83,7 @@ public class PlayerView implements Serializable {
     private final boolean passedUntilNextMain; // F6
     private final boolean passedUntilStackResolved; // F8
     private final boolean passedAllTurns; // F9
+    private final boolean passedUntilEndStepBeforeMyTurn; // F11
 
     public PlayerView(Player player, GameState state, Game game, UUID createdForPlayerId, UUID watcherUserId) {
         this.playerId = player.getId();
@@ -92,7 +93,8 @@ public class PlayerView implements Serializable {
         this.experience = player.getCounters().getCount(CounterType.EXPERIENCE);
         this.wins = player.getMatchPlayer().getWins();
         this.winsNeeded = player.getMatchPlayer().getWinsNeeded();
-        this.deckHashCode = player.getMatchPlayer().getDeck().getDeckHashCode();
+        // If match ended immediately before, deck can be set to null so check is necessarry here
+        this.deckHashCode = player.getMatchPlayer().getDeck() != null ? player.getMatchPlayer().getDeck().getDeckHashCode() : 0;
         this.libraryCount = player.getLibrary().size();
         this.handCount = player.getHand().size();
         this.manaPool = new ManaPoolView(player.getManaPool());
@@ -166,6 +168,7 @@ public class PlayerView implements Serializable {
         this.passedUntilNextMain = player.getPassedUntilNextMain();
         this.passedAllTurns = player.getPassedAllTurns();
         this.passedUntilStackResolved = player.getPassedUntilStackResolved();
+        this.passedUntilEndStepBeforeMyTurn = player.getPassedUntilEndStepBeforeMyTurn();
     }
 
     private boolean showInBattlefield(Permanent permanent, GameState state) {
@@ -301,5 +304,9 @@ public class PlayerView implements Serializable {
 
     public boolean isPassedUntilStackResolved() {
         return passedUntilStackResolved;
+    }
+    
+    public boolean isPassedUntilEndStepBeforeMyTurn() {
+        return passedUntilEndStepBeforeMyTurn;
     }
 }

@@ -151,7 +151,7 @@ class KioraRevealEffect extends OneShotEffect {
         Player controller = game.getPlayer(source.getControllerId());
         MageObject sourceObject = game.getObject(source.getSourceId());
         if (sourceObject != null && controller != null) {
-            Cards cards = new CardsImpl(Zone.LIBRARY);
+            Cards cards = new CardsImpl();
             cards.addAll(controller.getLibrary().getTopCards(game, 4));
             boolean creatureCardFound = false;
             boolean landCardFound = false;
@@ -173,7 +173,7 @@ class KioraRevealEffect extends OneShotEffect {
                 if ((creatureCardFound || landCardFound)
                         && controller.chooseUse(Outcome.DrawCard,
                                 "Put a creature card and/or a land card into your hand?", source, game)) {
-                    TargetCard target = new TargetCard(Zone.PICK, new FilterCreatureCard("creature card to put into your hand"));
+                    TargetCard target = new TargetCard(Zone.LIBRARY, new FilterCreatureCard("creature card to put into your hand"));
                     if (creatureCardFound && controller.chooseTarget(Outcome.DrawCard, cards, target, source, game)) {
                         Card card = cards.get(target.getFirstTarget(), game);
                         if (card != null) {

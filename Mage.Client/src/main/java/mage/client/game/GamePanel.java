@@ -71,7 +71,9 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
+import javax.swing.Timer;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -101,8 +103,8 @@ import mage.client.game.FeedbackPanel.FeedbackMode;
 import mage.client.plugins.adapters.MageActionCallback;
 import mage.client.plugins.impl.Plugins;
 import mage.client.util.CardsViewUtil;
-import mage.client.util.Config;
 import mage.client.util.Event;
+import mage.client.util.GUISizeHelper;
 import mage.client.util.GameManager;
 import mage.client.util.Listener;
 import mage.client.util.audio.AudioManager;
@@ -140,6 +142,7 @@ import mage.view.MatchView;
 import mage.view.PlayerView;
 import mage.view.RevealedView;
 import mage.view.SimpleCardsView;
+import mage.view.UserRequestMessage;
 import org.apache.log4j.Logger;
 import org.mage.card.arcane.CardPanel;
 import org.mage.plugins.card.utils.impl.ImageManagerImpl;
@@ -153,7 +156,7 @@ public final class GamePanel extends javax.swing.JPanel {
     private static final Logger logger = Logger.getLogger(GamePanel.class);
     private static final String YOUR_HAND = "Your hand";
     private static final int X_PHASE_WIDTH = 55;
-    private static final int STACK_MIN_CARDS_OFFSET_Y = 7;
+    private static final int STACK_MIN_CARDS_OFFSET_Y = 7;  // TODO: Size bui GUISize value
 
     private static final String CMD_AUTO_ORDER_FIRST = "cmdAutoOrderFirst";
     private static final String CMD_AUTO_ORDER_LAST = "cmdAutoOrderLast";
@@ -192,6 +195,10 @@ public final class GamePanel extends javax.swing.JPanel {
 
     private MageDialogState choiceWindowState;
 
+    private boolean initComponents;
+
+    private Timer resizeTimer;
+
     private enum PopUpMenuType {
 
         TRIGGER_ORDER
@@ -203,17 +210,15 @@ public final class GamePanel extends javax.swing.JPanel {
     private JPopupMenu popupMenuTriggerOrder;
 
     public GamePanel() {
+        initComponents = true;
         initComponents();
-
-        initPopupMenuTriggerOrder();
-        //this.add(popupMenuTriggerOrder);
 
         pickNumber = new PickNumberDialog();
         MageFrame.getDesktop().add(pickNumber, JLayeredPane.MODAL_LAYER);
 
         this.feedbackPanel.setConnectedChatPanel(this.userChatPanel);
 
-        this.stack.setMinOffsetY(STACK_MIN_CARDS_OFFSET_Y);
+        this.stackObjects.setMinOffsetY(STACK_MIN_CARDS_OFFSET_Y);
 
         // Override layout (I can't edit generated code)
         this.setLayout(new BorderLayout());
@@ -225,7 +230,7 @@ public final class GamePanel extends javax.swing.JPanel {
         Map<String, JComponent> myUi = getUIComponents(jLayeredBackgroundPane);
         Plugins.getInstance().updateGamePanel(myUi);
 
-        // Enlarge jlayeredpane on resize
+        // Enlarge jlayeredpane on resize of game panel
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -251,6 +256,37 @@ public final class GamePanel extends javax.swing.JPanel {
 
             }
         });
+        // Resize the width of the stack area if the size of the play area is changed
+        ComponentAdapter componentAdapterPlayField = new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                if (!initComponents) {
+                    if (resizeTimer.isRunning()) {
+                        resizeTimer.restart();
+                    } else {
+                        resizeTimer.start();
+                    }
+                }
+            }
+        };
+
+        resizeTimer = new Timer(1000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent evt) {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        resizeTimer.stop();
+                        setGUISize();
+                        feedbackPanel.changeGUISize();
+
+                    }
+                });
+            }
+        });
+
+        jPanel3.addComponentListener(componentAdapterPlayField);
+        initComponents = false;
     }
 
     private Map<String, JComponent> getUIComponents(JLayeredPane jLayeredPane) {
@@ -277,7 +313,7 @@ public final class GamePanel extends javax.swing.JPanel {
         this.removeListener();
 
         this.handContainer.cleanUp();
-        this.stack.cleanUp();
+        this.stackObjects.cleanUp();
         for (Map.Entry<UUID, PlayAreaPanel> playAreaPanelEntry : players.entrySet()) {
             playAreaPanelEntry.getValue().CleanUp();
         }
@@ -321,6 +357,65 @@ public final class GamePanel extends javax.swing.JPanel {
         }
         jPanel2.remove(bigCard);
         this.bigCard = null;
+    }
+
+    public void changeGUISize() {
+        initComponents = true;
+        setGUISize();
+        stackObjects.changeGUISize();
+        feedbackPanel.changeGUISize();
+        handContainer.changeGUISize();
+        for (PlayAreaPanel playAreaPanel : players.values()) {
+            playAreaPanel.changeGUISize();
+        }
+
+        for (CardInfoWindowDialog cardInfoWindowDialog : exiles.values()) {
+            cardInfoWindowDialog.changeGUISize();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : revealed.values()) {
+            cardInfoWindowDialog.changeGUISize();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : lookedAt.values()) {
+            cardInfoWindowDialog.changeGUISize();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : graveyardWindows.values()) {
+            cardInfoWindowDialog.changeGUISize();
+        }
+        for (ShowCardsDialog showCardsDialog : pickTarget) {
+            showCardsDialog.changeGUISize();
+        }
+
+        this.revalidate();
+        this.repaint();
+        initComponents = false;
+    }
+
+    private void setGUISize() {
+        jSplitPane0.setDividerSize(GUISizeHelper.dividerBarSize);
+        jSplitPane1.setDividerSize(GUISizeHelper.dividerBarSize);
+        jSplitPane2.setDividerSize(GUISizeHelper.dividerBarSize);
+        stackObjects.setCardDimension(GUISizeHelper.handCardDimension);
+        int newStackWidth = jPanel3.getWidth() * GUISizeHelper.stackWidth / 100;
+        if (newStackWidth < 410) {
+            newStackWidth = 410;
+        }
+        Dimension newDimension = new Dimension(jPanel3.getWidth() - newStackWidth, GUISizeHelper.handCardDimension.height + GUISizeHelper.scrollBarSize);
+        handContainer.setPreferredSize(newDimension);
+        handContainer.setMaximumSize(newDimension);
+
+        newDimension = new Dimension(newStackWidth, STACK_MIN_CARDS_OFFSET_Y + GUISizeHelper.handCardDimension.height + GUISizeHelper.scrollBarSize);
+        stackObjects.setPreferredSize(newDimension);
+        stackObjects.setMinimumSize(newDimension);
+        stackObjects.setMaximumSize(newDimension);
+
+        newDimension = new Dimension(newStackWidth, (int) pnlShortCuts.getPreferredSize().getHeight());
+        pnlShortCuts.setPreferredSize(newDimension);
+        pnlShortCuts.setMinimumSize(newDimension);
+        pnlShortCuts.setMaximumSize(newDimension);
+
+        txtSpellsCast.setFont(new Font(GUISizeHelper.gameDialogAreaFont.getFontName(), Font.BOLD, GUISizeHelper.gameDialogAreaFont.getSize()));
+
+        GUISizeHelper.changePopupMenuFont(popupMenuTriggerOrder);
     }
 
     private void saveDividerLocations() {
@@ -369,24 +464,20 @@ public final class GamePanel extends javax.swing.JPanel {
                 bigCard.setPreferredSize(bbDimension);
                 pnlShortCuts.revalidate();
                 pnlShortCuts.repaint();
-                //this.handContainer.sizeHand(0.8, smallMode);
                 for (PlayAreaPanel p : players.values()) {
                     p.sizePlayer(smallMode);
                 }
             }
-        } else {
-            if (smallMode) {
-                smallMode = false;
-                Dimension bbDimension = new Dimension(256, 367);
-                bigCard.setMaximumSize(bbDimension);
-                bigCard.setMinimumSize(bbDimension);
-                bigCard.setPreferredSize(bbDimension);
-                pnlShortCuts.revalidate();
-                pnlShortCuts.repaint();
-                this.handContainer.sizeHand(1, smallMode);
-                for (PlayAreaPanel p : players.values()) {
-                    p.sizePlayer(smallMode);
-                }
+        } else if (smallMode) {
+            smallMode = false;
+            Dimension bbDimension = new Dimension(256, 367);
+            bigCard.setMaximumSize(bbDimension);
+            bigCard.setMinimumSize(bbDimension);
+            bigCard.setPreferredSize(bbDimension);
+            pnlShortCuts.revalidate();
+            pnlShortCuts.repaint();
+            for (PlayAreaPanel p : players.values()) {
+                p.sizePlayer(smallMode);
             }
         }
 
@@ -417,6 +508,7 @@ public final class GamePanel extends javax.swing.JPanel {
         this.btnSkipToNextMain.setVisible(true);
         this.btnSkipStack.setVisible(true);
         this.btnSkipToYourTurn.setVisible(true);
+        this.btnSkipToEndStepBeforeYourTurn.setVisible(true);
 
         this.pnlReplay.setVisible(false);
 
@@ -450,6 +542,7 @@ public final class GamePanel extends javax.swing.JPanel {
         this.btnSkipToNextMain.setVisible(false);
         this.btnSkipStack.setVisible(false);
         this.btnSkipToYourTurn.setVisible(false);
+        this.btnSkipToEndStepBeforeYourTurn.setVisible(false);
 
         this.pnlReplay.setVisible(false);
         this.gameChatPanel.clear();
@@ -525,9 +618,9 @@ public final class GamePanel extends javax.swing.JPanel {
             }
         }
         PlayerView player = game.getPlayers().get(playerSeat);
-        PlayAreaPanel sessionPlayer = new PlayAreaPanel(player, bigCard, gameId, game.getPriorityTime(), this,
-                new PlayAreaPanelOptions(game.isPlayer(), true, game.isRollbackTurnsAllowed()));
-        players.put(player.getPlayerId(), sessionPlayer);
+        PlayAreaPanel playAreaPanel = new PlayAreaPanel(player, bigCard, gameId, game.getPriorityTime(), this,
+                new PlayAreaPanelOptions(game.isPlayer(), game.isPlayer(), game.isRollbackTurnsAllowed()));
+        players.put(player.getPlayerId(), playAreaPanel);
         GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.BOTH;
         c.weightx = 0.5;
@@ -537,8 +630,8 @@ public final class GamePanel extends javax.swing.JPanel {
         }
         c.gridx = col;
         c.gridy = row;
-        this.pnlBattlefield.add(sessionPlayer, c);
-        sessionPlayer.setVisible(true);
+        this.pnlBattlefield.add(playAreaPanel, c);
+        playAreaPanel.setVisible(true);
         if (oddNumber) {
             col++;
         }
@@ -683,7 +776,8 @@ public final class GamePanel extends javax.swing.JPanel {
                 }
                 players.get(player.getPlayerId()).update(player);
                 if (player.getPlayerId().equals(playerId)) {
-                    updateSkipButtons(player.isPassedTurn(), player.isPassedUntilEndOfTurn(), player.isPassedUntilNextMain(), player.isPassedAllTurns(), player.isPassedUntilStackResolved());
+                    updateSkipButtons(player.isPassedTurn(), player.isPassedUntilEndOfTurn(), player.isPassedUntilNextMain(), player.isPassedAllTurns(), player.isPassedUntilStackResolved(),
+                            player.isPassedUntilEndStepBeforeMyTurn());
                 }
                 // update open or remove closed graveyard windows
                 graveyards.put(player.getName(), player.getGraveyard());
@@ -692,7 +786,7 @@ public final class GamePanel extends javax.swing.JPanel {
                     if (cardInfoWindowDialog.isClosed()) {
                         graveyardWindows.remove(player.getName());
                     } else {
-                        cardInfoWindowDialog.loadCards(player.getGraveyard(), bigCard, gameId);
+                        cardInfoWindowDialog.loadCards(player.getGraveyard(), bigCard, gameId, false);
                     }
                 }
                 // show top card window
@@ -759,7 +853,7 @@ public final class GamePanel extends javax.swing.JPanel {
 
     static final int BORDER_SIZE = 2;
 
-    private void updateSkipButtons(boolean turn, boolean endOfTurn, boolean nextMain, boolean allTurns, boolean stack) {
+    private void updateSkipButtons(boolean turn, boolean endOfTurn, boolean nextMain, boolean allTurns, boolean stack, boolean endStepBeforeYourStep) {
         if (turn) { //F4
             btnSkipToNextTurn.setBorder(new LineBorder(Color.red, BORDER_SIZE));
         } else {
@@ -786,6 +880,12 @@ public final class GamePanel extends javax.swing.JPanel {
             btnSkipToYourTurn.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
         }
 
+        if (endStepBeforeYourStep) { // F11
+            btnSkipToEndStepBeforeYourTurn.setBorder(new LineBorder(Color.red, BORDER_SIZE));
+        } else {
+            btnSkipToEndStepBeforeYourTurn.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
+        }
+
     }
 
     /**
@@ -801,7 +901,7 @@ public final class GamePanel extends javax.swing.JPanel {
     }
 
     private void displayStack(GameView game, BigCard bigCard, FeedbackPanel feedbackPanel, UUID gameId) {
-        this.stack.loadCards(game.getStack(), bigCard, gameId, null);
+        this.stackObjects.loadCards(game.getStack(), bigCard, gameId, true);
     }
 
     /**
@@ -908,7 +1008,7 @@ public final class GamePanel extends javax.swing.JPanel {
         CardInfoWindowDialog newGraveyard = new CardInfoWindowDialog(ShowType.GRAVEYARD, playerName);
         graveyardWindows.put(playerName, newGraveyard);
         MageFrame.getDesktop().add(newGraveyard, JLayeredPane.MODAL_LAYER);
-        newGraveyard.loadCards(graveyards.get(playerName), bigCard, gameId);
+        newGraveyard.loadCards(graveyards.get(playerName), bigCard, gameId, false);
     }
 
     public void openTopLibraryWindow(String playerName) {
@@ -1037,10 +1137,6 @@ public final class GamePanel extends javax.swing.JPanel {
         ArrowBuilder.getBuilder().removeAllArrows(gameId);
     }
 
-    public int modalQuestion(String message, String title) {
-        return JOptionPane.showConfirmDialog(this, message, title, JOptionPane.YES_NO_OPTION);
-    }
-
     public void select(String message, GameView gameView, int messageId, Map<String, Serializable> options) {
         updateGame(gameView, options);
         boolean controllingPlayer = false;
@@ -1049,7 +1145,7 @@ public final class GamePanel extends javax.swing.JPanel {
                 // magenoxx: because of uncaught bug with saving state, rolling back and stack
                 // undo is allowed only for empty stack
                 controllingPlayer = !gameView.getPriorityPlayerName().equals(playerView.getName());
-                if (playerView.getStatesSavedSize() > 0 && gameView.getStack().size() == 0) {
+                if (playerView.getStatesSavedSize() > 0 && gameView.getStack().isEmpty()) {
                     feedbackPanel.allowUndo(playerView.getStatesSavedSize());
                 }
                 break;
@@ -1071,8 +1167,7 @@ public final class GamePanel extends javax.swing.JPanel {
         if (controllingPlayer) {
             priorityPlayerText = " / priority " + gameView.getPriorityPlayerName();
         }
-        String messageToDisplay = message + "<div style='font-size:11pt'>" + activePlayerText + " / " + gameView.getStep().toString() + priorityPlayerText + "</div>";
-
+        String messageToDisplay = message + FeedbackPanel.getSmallText(activePlayerText + " / " + gameView.getStep().toString() + priorityPlayerText);
         this.feedbackPanel.getFeedback(FeedbackMode.SELECT, messageToDisplay, gameView.getSpecial(), panelOptions, messageId);
     }
 
@@ -1110,7 +1205,7 @@ public final class GamePanel extends javax.swing.JPanel {
         if (PopUpMenuType.TRIGGER_ORDER.equals(popupMenuType)) {
             popupMenu = popupMenuTriggerOrder;
         }
-        showCards.loadCards(title, cards, bigCard, Config.dimensionsEnlarged, gameId, required, options, popupMenu, getShowCardsEventListener(showCards));
+        showCards.loadCards(title, cards, bigCard, gameId, required, options, popupMenu, getShowCardsEventListener(showCards));
         return showCards;
     }
 
@@ -1143,7 +1238,7 @@ public final class GamePanel extends javax.swing.JPanel {
     public void pickPile(String message, CardsView pile1, CardsView pile2) {
         hideAll();
         PickPileDialog pickPileDialog = new PickPileDialog();
-        pickPileDialog.loadCards(message, pile1, pile2, bigCard, Config.dimensions, gameId);
+        pickPileDialog.loadCards(message, pile1, pile2, bigCard, gameId);
         session.sendPlayerBoolean(gameId, pickPileDialog.isPickedPile1());
         pickPileDialog.cleanUp();
         pickPileDialog.removeDialog();
@@ -1175,8 +1270,6 @@ public final class GamePanel extends javax.swing.JPanel {
         feedbackPanel = new mage.client.game.FeedbackPanel();
 
         txtSpellsCast = new javax.swing.JLabel();
-        Font font = new Font("SansSerif", Font.BOLD, 12);
-        txtSpellsCast.setFont(font);
         Border paddingBorder = BorderFactory.createEmptyBorder(4, 4, 4, 4);
         Border border = BorderFactory.createLineBorder(Color.DARK_GRAY, 2);
         txtSpellsCast.setBorder(BorderFactory.createCompoundBorder(border, paddingBorder));
@@ -1190,13 +1283,13 @@ public final class GamePanel extends javax.swing.JPanel {
         btnSkipToNextMain = new javax.swing.JButton(); // F7
         btnSkipStack = new javax.swing.JButton(); // F8
         btnSkipToYourTurn = new javax.swing.JButton(); // F9
+        btnSkipToEndStepBeforeYourTurn = new javax.swing.JButton(); // F11
 
         btnConcede = new javax.swing.JButton();
         btnSwitchHands = new javax.swing.JButton();
         btnStopWatching = new javax.swing.JButton();
 
         bigCard = new mage.client.cards.BigCard();
-        stack = new mage.client.cards.Cards();
         pnlReplay = new javax.swing.JPanel();
         btnStopReplay = new javax.swing.JButton();
         btnNextPlay = new javax.swing.JButton();
@@ -1213,10 +1306,15 @@ public final class GamePanel extends javax.swing.JPanel {
         gameChatPanel.setConnectedChat(userChatPanel);
         gameChatPanel.disableInput();
         gameChatPanel.setMinimumSize(new java.awt.Dimension(100, 48));
+        gameChatPanel.enableHyperlinks();
         jSplitPane2 = new javax.swing.JSplitPane();
         handContainer = new HandPanel();
-
         handCards = new HashMap<>();
+
+        pnlShortCuts.setOpaque(false);
+        pnlShortCuts.setPreferredSize(new Dimension(410, 72));
+
+        stackObjects = new mage.client.cards.Cards();
 
         jSplitPane1.setBorder(null);
         jSplitPane1.setDividerSize(7);
@@ -1231,8 +1329,6 @@ public final class GamePanel extends javax.swing.JPanel {
 
         restoreDividerLocations();
 
-        pnlShortCuts.setOpaque(false);
-        pnlShortCuts.setPreferredSize(new Dimension(400, 72));
         lblPhase.setLabelFor(txtPhase);
         lblPhase.setText("Phase:");
 
@@ -1267,10 +1363,6 @@ public final class GamePanel extends javax.swing.JPanel {
 
         lblPriority.setLabelFor(txtPriority);
         lblPriority.setText("Priority Player:");
-
-        feedbackPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(150, 50, 50), 2));
-        feedbackPanel.setMaximumSize(new java.awt.Dimension(208, 121));
-        feedbackPanel.setMinimumSize(new java.awt.Dimension(208, 121));
 
         bigCard.setBorder(new LineBorder(Color.black, 1, true));
 
@@ -1388,6 +1480,29 @@ public final class GamePanel extends javax.swing.JPanel {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 btnPassPriorityUntilNextYourTurnActionPerformed(actionEvent);
+            }
+        });
+
+        btnSkipToEndStepBeforeYourTurn.setContentAreaFilled(false);
+        btnSkipToEndStepBeforeYourTurn.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
+        btnSkipToEndStepBeforeYourTurn.setIcon(new ImageIcon(ImageManagerImpl.getInstance().getSkipEndStepBeforeYourTurnButtonImage()));
+        btnSkipToEndStepBeforeYourTurn.setToolTipText("Skip to the end step before your turn (F11) - adjust using preferences.");
+        btnSkipToEndStepBeforeYourTurn.setFocusable(false);
+        btnSkipToEndStepBeforeYourTurn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent evt) {
+                if (evt.getButton() == MouseEvent.BUTTON1) {
+                    btnSkipToEndStepBeforeYourTurnActionPerformed(null);
+                }
+            }
+        });
+
+        KeyStroke ks11 = KeyStroke.getKeyStroke(KeyEvent.VK_F11, 0);
+        this.getInputMap(c).put(ks11, "F11_PRESS");
+        this.getActionMap().put("F11_PRESS", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                btnSkipToEndStepBeforeYourTurnActionPerformed(actionEvent);
             }
         });
 
@@ -1532,8 +1647,7 @@ public final class GamePanel extends javax.swing.JPanel {
             }
         });
 
-        stack.setPreferredSize(new java.awt.Dimension(Config.dimensions.frameWidth, Config.dimensions.frameHeight + 25));
-        stack.setBackgroundColor(new Color(0, 0, 0, 0));
+        stackObjects.setBackgroundColor(new Color(0, 0, 0, 40));
 
         btnStopReplay.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/control_stop.png")));
         btnStopReplay.addActionListener(new java.awt.event.ActionListener() {
@@ -1575,6 +1689,10 @@ public final class GamePanel extends javax.swing.JPanel {
             }
         });
 
+        initPopupMenuTriggerOrder();
+
+        setGUISize();
+
         // Replay panel to control replay of games
         javax.swing.GroupLayout gl_pnlReplay = new javax.swing.GroupLayout(pnlReplay);
         pnlReplay.setLayout(gl_pnlReplay);
@@ -1610,6 +1728,7 @@ public final class GamePanel extends javax.swing.JPanel {
                         .addComponent(btnSkipToNextMain)
                         .addComponent(btnSkipToYourTurn)
                         .addComponent(btnSkipStack)
+                        .addComponent(btnSkipToEndStepBeforeYourTurn)
                 )
                 .addGroup(gl_pnlShortCuts.createSequentialGroup()
                         .addComponent(txtSpellsCast)
@@ -1642,6 +1761,7 @@ public final class GamePanel extends javax.swing.JPanel {
                                 .addComponent(btnSkipToNextMain)
                                 .addComponent(btnSkipToYourTurn)
                                 .addComponent(btnSkipStack)
+                                .addComponent(btnSkipToEndStepBeforeYourTurn)
                         )
                         .addGroup(gl_pnlShortCuts.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                                 .addComponent(txtSpellsCast)
@@ -1684,8 +1804,8 @@ public final class GamePanel extends javax.swing.JPanel {
         jPhases.addMouseListener(phasesMouseAdapter);
 
         pnlReplay.setOpaque(false);
-        HelperPanel helper = new HelperPanel();
-        helper.setPreferredSize(new Dimension(100, 90));
+
+        helper = new HelperPanel();
         feedbackPanel.setHelperPanel(helper);
 
         jSplitPane2.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
@@ -1714,8 +1834,8 @@ public final class GamePanel extends javax.swing.JPanel {
                                                 .addComponent(handContainer, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                         )
                                         .addGroup(gl_jPanel3.createParallelGroup(Alignment.LEADING)
-                                                .addComponent(pnlShortCuts, 400, 400, 400)
-                                                .addComponent(stack, 400, 400, 400)
+                                                .addComponent(pnlShortCuts, 410, GroupLayout.PREFERRED_SIZE, Short.MAX_VALUE)
+                                                .addComponent(stackObjects, 410, GroupLayout.PREFERRED_SIZE, Short.MAX_VALUE)
                                         )
                                 )
                                 .addGap(0)
@@ -1737,7 +1857,7 @@ public final class GamePanel extends javax.swing.JPanel {
                                 .addGroup(gl_jPanel3.createSequentialGroup()
                                         .addGap(2)
                                         .addComponent(pnlShortCuts, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(stack, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(stackObjects, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                                 )
                                 .addGroup(gl_jPanel3.createSequentialGroup()
                                         .addComponent(helper, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
@@ -1801,6 +1921,9 @@ public final class GamePanel extends javax.swing.JPanel {
         for (MouseListener ml : this.btnSkipStack.getMouseListeners()) {
             this.btnSkipStack.removeMouseListener(ml);
         }
+        for (MouseListener ml : this.btnSkipToEndStepBeforeYourTurn.getMouseListeners()) {
+            this.btnSkipToEndStepBeforeYourTurn.removeMouseListener(ml);
+        }
         for (MouseListener ml : this.btnSkipToEndTurn.getMouseListeners()) {
             this.btnSkipToEndTurn.removeMouseListener(ml);
         }
@@ -1861,45 +1984,53 @@ public final class GamePanel extends javax.swing.JPanel {
     }
 
     private void btnConcedeActionPerformed(java.awt.event.ActionEvent evt) {
-        if (modalQuestion("Are you sure you want to concede?", "Confirm concede") == JOptionPane.YES_OPTION) {
-            session.sendPlayerAction(PlayerAction.CONCEDE, gameId, null);
-        }
+        UserRequestMessage message = new UserRequestMessage("Confirm concede", "Are you sure you want to concede?");
+        message.setButton1("No", null);
+        message.setButton2("Yes", PlayerAction.CLIENT_CONCEDE_GAME);
+        message.setGameId(gameId);
+        MageFrame.getInstance().showUserRequestDialog(message);
     }
 
     private void btnEndTurnActionPerformed(java.awt.event.ActionEvent evt) {
         session.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_NEXT_TURN, gameId, null);
         AudioManager.playOnSkipButton();
-        updateSkipButtons(true, false, false, false, false);
+        updateSkipButtons(true, false, false, false, false, false);
     }
 
     private void btnUntilEndOfTurnActionPerformed(java.awt.event.ActionEvent evt) {
         session.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_TURN_END_STEP, gameId, null);
         AudioManager.playOnSkipButton();
-        updateSkipButtons(false, true, false, false, false);
+        updateSkipButtons(false, true, false, false, false, false);
     }
 
     private void btnUntilNextMainPhaseActionPerformed(java.awt.event.ActionEvent evt) {
         session.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_NEXT_MAIN_PHASE, gameId, null);
         AudioManager.playOnSkipButton();
-        updateSkipButtons(false, false, true, false, false);
+        updateSkipButtons(false, false, true, false, false, false);
     }
 
     private void btnPassPriorityUntilNextYourTurnActionPerformed(java.awt.event.ActionEvent evt) {
         session.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_MY_NEXT_TURN, gameId, null);
         AudioManager.playOnSkipButton();
-        updateSkipButtons(false, false, false, true, false);
+        updateSkipButtons(false, false, false, true, false, false);
     }
 
     private void btnPassPriorityUntilStackResolvedActionPerformed(java.awt.event.ActionEvent evt) {
         session.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_STACK_RESOLVED, gameId, null);
         AudioManager.playOnSkipButton();
-        updateSkipButtons(false, false, false, false, true);
+        updateSkipButtons(false, false, false, false, true, false);
+    }
+
+    private void btnSkipToEndStepBeforeYourTurnActionPerformed(java.awt.event.ActionEvent evt) {
+        session.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_END_STEP_BEFORE_MY_NEXT_TURN, gameId, null);
+        AudioManager.playOnSkipButton();
+        updateSkipButtons(false, false, false, false, false, true);
     }
 
     private void restorePriorityActionPerformed(java.awt.event.ActionEvent evt) {
         session.sendPlayerAction(PlayerAction.PASS_PRIORITY_CANCEL_ALL_ACTIONS, gameId, null);
         AudioManager.playOnSkipButtonCancel();
-        updateSkipButtons(false, false, false, false, false);
+        updateSkipButtons(false, false, false, false, false, false);
     }
 
     private void mouseClickPhaseBar(MouseEvent evt) {
@@ -1927,17 +2058,22 @@ public final class GamePanel extends javax.swing.JPanel {
     }
 
     private void btnStopWatchingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopWatchingActionPerformed
-        if (modalQuestion("Are you sure you want to stop watching?", "Stop watching") == JOptionPane.YES_OPTION) {
-            session.stopWatching(gameId);
-            this.removeGame();
-        }
+        UserRequestMessage message = new UserRequestMessage("Stop watching", "Are you sure you want to stop watching?");
+        message.setButton1("No", null);
+        message.setButton2("Yes", PlayerAction.CLIENT_STOP_WATCHING);
+        message.setGameId(gameId);
+        MageFrame.getInstance().showUserRequestDialog(message);
     }//GEN-LAST:event_btnStopWatchingActionPerformed
 
     private void btnStopReplayActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopReplayActionPerformed
         if (replayTask != null && !replayTask.isDone()) {
             replayTask.cancel(true);
-        } else if (modalQuestion("Are you sure you want to stop replay?", "Stop replay") == JOptionPane.YES_OPTION) {
-            session.stopReplay(gameId);
+        } else {
+            UserRequestMessage message = new UserRequestMessage("Stop replay", "Are you sure you want to stop replay?");
+            message.setButton1("No", null);
+            message.setButton2("Yes", PlayerAction.CLIENT_REPLAY_ACTION);
+            message.setGameId(gameId);
+            MageFrame.getInstance().showUserRequestDialog(message);
         }
     }//GEN-LAST:event_btnStopReplayActionPerformed
 
@@ -2113,6 +2249,7 @@ public final class GamePanel extends javax.swing.JPanel {
     private javax.swing.JButton btnSkipToNextMain; // F7
     private javax.swing.JButton btnSkipStack; // F8
     private javax.swing.JButton btnSkipToYourTurn; // F9
+    private javax.swing.JButton btnSkipToEndStepBeforeYourTurn; // F11
 
     private javax.swing.JButton btnConcede;
     private javax.swing.JButton btnSwitchHands;
@@ -2127,6 +2264,7 @@ public final class GamePanel extends javax.swing.JPanel {
 
     private mage.client.chat.ChatPanelBasic gameChatPanel;
     private mage.client.game.FeedbackPanel feedbackPanel;
+    private HelperPanel helper;
     private mage.client.chat.ChatPanelBasic userChatPanel;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
@@ -2147,7 +2285,8 @@ public final class GamePanel extends javax.swing.JPanel {
     private javax.swing.JLabel txtTurn;
 
     private Map<String, CardsView> handCards;
-    private mage.client.cards.Cards stack;
+
+    private mage.client.cards.Cards stackObjects;
     private HandPanel handContainer;
 
     private javax.swing.JSplitPane jSplitPane2;

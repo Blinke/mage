@@ -33,6 +33,7 @@ import mage.cards.CardImpl;
 import mage.constants.CardType;
 import mage.constants.Rarity;
 import mage.constants.Zone;
+import mage.constants.ZoneDetail;
 import mage.target.TargetSpell;
 
 /**
@@ -46,7 +47,7 @@ public class Hinder extends CardImpl {
         this.expansionSetCode = "CHK";
 
         // Counter target spell. If that spell is countered this way, put that card on the top or bottom of its owner's library instead of into that player's graveyard.
-        this.getSpellAbility().addEffect(new CounterTargetWithReplacementEffect(Zone.LIBRARY, true));
+        this.getSpellAbility().addEffect(new CounterTargetWithReplacementEffect(Zone.LIBRARY, ZoneDetail.CHOOSE));
         this.getSpellAbility().addTarget(new TargetSpell());
     }
 

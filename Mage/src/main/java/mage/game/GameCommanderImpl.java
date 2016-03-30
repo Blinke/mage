@@ -35,7 +35,6 @@ import java.util.UUID;
 import mage.abilities.Ability;
 import mage.abilities.common.SimpleStaticAbility;
 import mage.abilities.effects.common.InfoEffect;
-import mage.abilities.effects.common.continuous.CommanderManaReplacementEffect;
 import mage.abilities.effects.common.continuous.CommanderReplacementEffect;
 import mage.abilities.effects.common.cost.CommanderCostModification;
 import mage.cards.Card;
@@ -50,7 +49,6 @@ import mage.filter.FilterCard;
 import mage.game.turn.TurnMod;
 import mage.players.Player;
 import mage.target.common.TargetCardInHand;
-import mage.util.CardUtil;
 import mage.watchers.common.CommanderInfoWatcher;
 
 public abstract class GameCommanderImpl extends GameImpl {
@@ -90,7 +88,8 @@ public abstract class GameCommanderImpl extends GameImpl {
                         commander.getAbilities().setControllerId(player.getId());
                         ability.addEffect(new CommanderReplacementEffect(commander.getId(), alsoHand, alsoLibrary));
                         ability.addEffect(new CommanderCostModification(commander.getId()));
-                        ability.addEffect(new CommanderManaReplacementEffect(player.getId(), CardUtil.getColorIdentity(commander)));
+                        // Commander rule #4 was removed Jan. 18, 2016
+                        // ability.addEffect(new CommanderManaReplacementEffect(player.getId(), CardUtil.getColorIdentity(commander)));
                         getState().setValue(commander.getId() + "_castCount", 0);
                         CommanderInfoWatcher watcher = new CommanderInfoWatcher(commander.getId(), CHECK_COMMANDER_DAMAGE);
                         getState().getWatchers().add(watcher);
@@ -177,7 +176,7 @@ public abstract class GameCommanderImpl extends GameImpl {
                 }
             }
             if (mulliganedCards.get(playerId).size() > 0) {
-                player.shuffleLibrary(this);
+                player.shuffleLibrary(null, this);
             }
         }
     }
@@ -209,7 +208,7 @@ public abstract class GameCommanderImpl extends GameImpl {
     @Override
     public Set<UUID> getOpponents(UUID playerId) {
         Set<UUID> opponents = new HashSet<>();
-        for (UUID opponentId : this.getPlayer(playerId).getInRange()) {
+        for (UUID opponentId : getState().getPlayersInRange(playerId, this)) {
             if (!opponentId.equals(playerId)) {
                 opponents.add(opponentId);
             }

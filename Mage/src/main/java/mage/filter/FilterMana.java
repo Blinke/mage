@@ -39,6 +39,7 @@ public class FilterMana implements Serializable {
     protected boolean white;
     protected boolean red;
     protected boolean blue;
+    protected boolean generic;
     protected boolean colorless;
 
     public FilterMana() {
@@ -50,6 +51,7 @@ public class FilterMana implements Serializable {
         white = filter.white;
         red = filter.red;
         blue = filter.blue;
+        generic = filter.generic;
         colorless = filter.colorless;
     }
 
@@ -93,6 +95,14 @@ public class FilterMana implements Serializable {
         this.blue = blue;
     }
 
+    public boolean isGeneric() {
+        return generic;
+    }
+
+    public void setGeneric(boolean generic) {
+        this.generic = generic;
+    }
+
     public boolean isColorless() {
         return colorless;
     }
@@ -104,4 +114,14 @@ public class FilterMana implements Serializable {
     public FilterMana copy() {
         return new FilterMana(this);
     }
+
+    @Override
+    public String toString() {
+        return (black ? "{B}" : "")
+                + (green ? "{G}" : "")
+                + (red ? "{R}" : "")
+                + (blue ? "{U}" : "")
+                + (white ? "{W}" : "");
+    }
+
 }

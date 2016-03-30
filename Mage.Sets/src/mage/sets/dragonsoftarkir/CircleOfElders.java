@@ -59,10 +59,10 @@ public class CircleOfElders extends CardImpl {
         // Vigilance
         this.addAbility(VigilanceAbility.getInstance());
 
-        // <i>Formidable</i> - {T}: Add {3} to your mana pool. Activate this only if creatures you control have total power 8 or greater.
+        // <i>Formidable</i> - {T}: Add {C}{C}{C} to your mana pool. Activate this only if creatures you control have total power 8 or greater.
         Ability ability = new ActivateIfConditionManaAbility(
                 Zone.BATTLEFIELD,
-                new BasicManaEffect(new Mana(0,0,0,0,0,3,0)),
+                new BasicManaEffect(new Mana(0, 0, 0, 0, 0, 0, 0, 3)),
                 new TapSourceCost(),
                 FormidableCondition.getInstance());
         ability.setAbilityWord(AbilityWord.FORMIDABLE);

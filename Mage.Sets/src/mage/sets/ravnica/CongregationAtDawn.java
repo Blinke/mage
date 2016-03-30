@@ -103,9 +103,9 @@ class CongregationAtDawnEffect extends OneShotEffect {
                         revealed.add(card);
                     }
                     controller.revealCards(sourceObject.getName(), revealed, game);
-                    controller.shuffleLibrary(game);
+                    controller.shuffleLibrary(source, game);
 
-                    TargetCard targetToLib = new TargetCard(Zone.PICK, new FilterCard(textTop));
+                    TargetCard targetToLib = new TargetCard(Zone.LIBRARY, new FilterCard(textTop));
 
                     while (revealed.size() > 1 && controller.canRespond()) {
                         controller.choose(Outcome.Neutral, revealed, targetToLib, game);

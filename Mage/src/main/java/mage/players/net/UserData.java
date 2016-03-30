@@ -23,6 +23,11 @@ public class UserData implements Serializable {
     protected boolean passPriorityActivation;
     protected boolean autoOrderTrigger;
 
+    protected String matchHistory;
+    protected int matchQuitRatio;
+    protected String tourneyHistory;
+    protected int tourneyQuitRatio;
+
     public UserData(UserGroup userGroup, int avatarId, boolean showAbilityPickerForced,
             boolean allowRequestShowHandCards, boolean confirmEmptyManaPool, UserSkipPrioritySteps userSkipPrioritySteps,
             String flagName, boolean askMoveToGraveOrder, boolean manaPoolAutomatic, boolean manaPoolAutomaticRestricted,
@@ -40,6 +45,10 @@ public class UserData implements Serializable {
         this.passPriorityCast = passPriorityCast;
         this.passPriorityActivation = passPriorityActivation;
         this.autoOrderTrigger = autoOrderTrigger;
+        this.matchHistory = "";
+        this.matchQuitRatio = 0;
+        this.tourneyHistory = "";
+        this.tourneyQuitRatio = 0;
     }
 
     public void update(UserData userData) {
@@ -166,7 +175,47 @@ public class UserData implements Serializable {
         this.autoOrderTrigger = autoOrderTrigger;
     }
 
+    public String getHistory() {
+        if (UserGroup.COMPUTER.equals(this.groupId)) {
+            return "";
+        }
+        return "Matches: " + this.matchHistory + " (" + this.matchQuitRatio + "%) Tourneys: " + this.tourneyHistory + " (" + this.tourneyQuitRatio + "%)";
+    }
+
+    public void setMatchHistory(String history) {
+        this.matchHistory = history;
+    }
+
+    public String getMatchHistory() {
+        return matchHistory;
+    }
+
+    public void setMatchQuitRatio(int ratio) {
+        this.matchQuitRatio = ratio;
+    }
+
+    public int getMatchQuitRatio() {
+        return matchQuitRatio;
+    }
+
+    public void setTourneyHistory(String history) {
+        this.tourneyHistory = history;
+    }
+
+    public String getTourneyHistory() {
+        return tourneyHistory;
+    }
+
+    public void setTourneyQuitRatio(int ratio) {
+        this.tourneyQuitRatio = ratio;
+    }
+
+    public int getTourneyQuitRatio() {
+        return tourneyQuitRatio;
+    }
+
     public static String getDefaultFlagName() {
         return "world.png";
     }
+
 }

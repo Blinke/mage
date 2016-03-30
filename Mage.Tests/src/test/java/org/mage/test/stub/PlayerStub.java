@@ -348,8 +348,14 @@ public class PlayerStub implements Player {
         return false;
     }
 
+        
     @Override
     public boolean getPassedAllTurns() {
+        return false;
+    }
+    
+    @Override
+    public boolean getPassedUntilEndStepBeforeMyTurn() {
         return false;
     }
 
@@ -544,7 +550,7 @@ public class PlayerStub implements Player {
     }
 
     @Override
-    public void shuffleLibrary(Game game) {
+    public void shuffleLibrary(Ability source, Game game) {
 
     }
 
@@ -1237,4 +1243,10 @@ public class PlayerStub implements Player {
     public boolean addTargets(Ability ability, Game game) {
         return false;
     }
+
+    @Override
+    public String getHistory() {
+        return "";
+    }
+
 }

@@ -102,7 +102,7 @@ class SoldeviSageEffect extends OneShotEffect {
         if (player != null) {
             Cards initialHand = player.getHand().copy();
             player.drawCards(3, game);
-            Cards drawnCards = new CardsImpl(Zone.PICK);
+            Cards drawnCards = new CardsImpl();
             for (UUID cardId : player.getHand()) {
                 if (!initialHand.contains(cardId)) {
                     drawnCards.add(cardId);
@@ -110,7 +110,7 @@ class SoldeviSageEffect extends OneShotEffect {
             }
 
             if (drawnCards.size() > 0) {
-                TargetCard cardToDiscard = new TargetCard(Zone.PICK, new FilterCard("card to discard"));
+                TargetCard cardToDiscard = new TargetCard(Zone.HAND, new FilterCard("card to discard"));
                 cardToDiscard.setNotTarget(true);
                 if (player.choose(Outcome.Discard, drawnCards, cardToDiscard, game)) {
                     Card card = player.getHand().get(cardToDiscard.getFirstTarget(), game);

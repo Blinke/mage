@@ -79,7 +79,7 @@ public class ManaOptionsTest extends CardTestPlayerBase {
     }
 
     // Adarkar Wastes
-    // {T}: Add {1} to your mana pool.
+    // {T}: Add {C} to your mana pool.
     // {T}: Add {W} or {U} to your mana pool. Adarkar Wastes deals 1 damage to you.
     @Test
     public void testAdarkarWastes() {
@@ -90,12 +90,17 @@ public class ManaOptionsTest extends CardTestPlayerBase {
 
         ManaOptions manaOptions = playerA.getAvailableManaTest(currentGame);
 
-        Assert.assertEquals("mana variations don't fit", 4, manaOptions.size());
-        Assert.assertEquals("{W}{W}{W}", getManaOption(0, manaOptions));
-        Assert.assertEquals("{U}{W}{W}", getManaOption(1, manaOptions));
-        Assert.assertEquals("{U}{U}{W}", getManaOption(2, manaOptions));
-        Assert.assertEquals("{U}{U}{U}", getManaOption(3, manaOptions));
-
+        Assert.assertEquals("mana variations don't fit", 10, manaOptions.size());
+        Assert.assertEquals("{C}{C}{C}", getManaOption(0, manaOptions));
+        Assert.assertEquals("{C}{C}{W}", getManaOption(1, manaOptions));
+        Assert.assertEquals("{C}{C}{U}", getManaOption(2, manaOptions));
+        Assert.assertEquals("{C}{W}{W}", getManaOption(3, manaOptions));
+        Assert.assertEquals("{C}{U}{W}", getManaOption(4, manaOptions));
+        Assert.assertEquals("{C}{U}{U}", getManaOption(5, manaOptions));
+        Assert.assertEquals("{W}{W}{W}", getManaOption(6, manaOptions));
+        Assert.assertEquals("{U}{W}{W}", getManaOption(7, manaOptions));
+        Assert.assertEquals("{U}{U}{W}", getManaOption(8, manaOptions));
+        Assert.assertEquals("{U}{U}{U}", getManaOption(9, manaOptions));
     }
 
     // Chromatic Sphere
@@ -146,7 +151,7 @@ public class ManaOptionsTest extends CardTestPlayerBase {
         ManaOptions manaOptions = playerA.getAvailableManaTest(currentGame);
 
         Assert.assertEquals("mana variations don't fit", 1, manaOptions.size());
-        Assert.assertEquals("{1}{G}{G}{W}{W}", getManaOption(0, manaOptions));
+        Assert.assertEquals("{C}{G}{G}{W}{W}", getManaOption(0, manaOptions));
     }
 
     // Crystal Quarry
@@ -164,12 +169,12 @@ public class ManaOptionsTest extends CardTestPlayerBase {
         ManaOptions manaOptions = playerA.getAvailableManaTest(currentGame);
 
         Assert.assertEquals("mana variations don't fit", 2, manaOptions.size());
-        Assert.assertEquals("{1}{G}{G}{G}{W}{W}", getManaOption(0, manaOptions));
+        Assert.assertEquals("{C}{G}{G}{G}{W}{W}", getManaOption(0, manaOptions));
         Assert.assertEquals("{R}{G}{U}{W}{B}", getManaOption(1, manaOptions));
     }
 
     // Nykthos, Shrine to Nyx
-    // {T}: Add {1} to your mana pool.
+    // {T}: Add {C} to your mana pool.
     // {2}, {T}: Choose a color. Add to your mana pool an amount of mana of that color equal to your devotion to that color. (Your devotion to a color is the number of mana symbols of that color in the mana costs of permanents you control.)
     @Test
     public void testNykthos1() {
@@ -182,8 +187,9 @@ public class ManaOptionsTest extends CardTestPlayerBase {
 
         ManaOptions manaOptions = playerA.getAvailableManaTest(currentGame);
 
-        Assert.assertEquals("mana variations don't fit", 1, manaOptions.size());
-        Assert.assertEquals("{G}{G}{G}{G}{G}", getManaOption(0, manaOptions));
+        Assert.assertEquals("mana variations don't fit", 2, manaOptions.size());
+        Assert.assertEquals("{C}{G}{G}{G}", getManaOption(0, manaOptions));
+        Assert.assertEquals("{G}{G}{G}{G}{G}", getManaOption(1, manaOptions));
     }
 
     @Test
@@ -198,9 +204,10 @@ public class ManaOptionsTest extends CardTestPlayerBase {
 
         ManaOptions manaOptions = playerA.getAvailableManaTest(currentGame);
 
-        Assert.assertEquals("mana variations don't fit", 2, manaOptions.size());
-        Assert.assertEquals("{G}{G}{G}{G}{G}", getManaOption(0, manaOptions));
-        Assert.assertEquals("{R}{R}{R}{G}", getManaOption(1, manaOptions));
+        Assert.assertEquals("mana variations don't fit", 3, manaOptions.size());
+        Assert.assertEquals("{C}{G}{G}{G}", getManaOption(0, manaOptions));
+        Assert.assertEquals("{G}{G}{G}{G}{G}", getManaOption(1, manaOptions));
+        Assert.assertEquals("{R}{R}{R}{G}", getManaOption(2, manaOptions));
     }
 
     @Test
@@ -215,7 +222,7 @@ public class ManaOptionsTest extends CardTestPlayerBase {
         ManaOptions manaOptions = playerA.getAvailableManaTest(currentGame);
 
         Assert.assertEquals("mana variations don't fit", 1, manaOptions.size());
-        Assert.assertEquals("{1}{G}{Any}", getManaOption(0, manaOptions));
+        Assert.assertEquals("{C}{G}{Any}", getManaOption(0, manaOptions));
     }
 
     @Test
@@ -225,9 +232,9 @@ public class ManaOptionsTest extends CardTestPlayerBase {
         addCard(Zone.BATTLEFIELD, playerA, "Chromatic Star", 1);
         // {1}, {T}, Sacrifice Chromatic Sphere: Add one mana of any color to your mana pool. Draw a card.
         addCard(Zone.BATTLEFIELD, playerA, "Chromatic Sphere", 1);
-        // {T}: Add {1} to your mana pool. If you control an Urza's Mine and an Urza's Power-Plant, add {3} to your mana pool instead.
+        // {T}: Add {C} to your mana pool. If you control an Urza's Mine and an Urza's Power-Plant, add {C}{C}{C} to your mana pool instead.
         addCard(Zone.BATTLEFIELD, playerA, "Urza's Tower", 1);
-        // {T}: Add {1} to your mana pool.
+        // {T}: Add {C} to your mana pool.
         // {T}: Add {R} or {G} to your mana pool. Each opponent gains 1 life.
         addCard(Zone.BATTLEFIELD, playerA, "Grove of the Burnwillows", 1);
 
@@ -251,10 +258,11 @@ public class ManaOptionsTest extends CardTestPlayerBase {
 
         ManaOptions manaOptions = playerA.getAvailableManaTest(currentGame);
 
-        Assert.assertEquals("mana variations don't fit", 3, manaOptions.size());
-        Assert.assertEquals("{W}{W}", getManaOption(0, manaOptions));
-        Assert.assertEquals("{W}{B}", getManaOption(1, manaOptions));
-        Assert.assertEquals("{B}{B}", getManaOption(2, manaOptions));
+        Assert.assertEquals("mana variations don't fit", 4, manaOptions.size());
+        Assert.assertEquals("{C}{W}", getManaOption(0, manaOptions));
+        Assert.assertEquals("{W}{W}", getManaOption(1, manaOptions));
+        Assert.assertEquals("{W}{B}", getManaOption(2, manaOptions));
+        Assert.assertEquals("{B}{B}", getManaOption(3, manaOptions));
     }
 
     /**
@@ -293,7 +301,7 @@ public class ManaOptionsTest extends CardTestPlayerBase {
 
     @Test
     public void testMageRingNetwork() {
-        // {T}: Add {1} to your mana pool.
+        // {T}: Add {C} to your mana pool.
         // {T}, {1} : Put a storage counter on Mage-Ring Network.
         // {T}, Remove X storage counters from Mage-Ring Network: Add {X} to your mana pool.
         addCard(Zone.BATTLEFIELD, playerA, "Mage-Ring Network", 1);
@@ -306,14 +314,14 @@ public class ManaOptionsTest extends CardTestPlayerBase {
         ManaOptions manaOptions = playerA.getAvailableManaTest(currentGame);
 
         Assert.assertEquals("mana variations don't fit", 1, manaOptions.size());
-        Assert.assertEquals("{1}{W}{B}", getManaOption(0, manaOptions));
+        Assert.assertEquals("{C}{W}{B}", getManaOption(0, manaOptions));
     }
 
     @Test
     public void testMageRingNetwork2() {
-        // {T}: Add {1} to your mana pool.
+        // {T}: Add {C} to your mana pool.
         // {T}, {1} : Put a storage counter on Mage-Ring Network.
-        // {T}, Remove X storage counters from Mage-Ring Network: Add {X} to your mana pool.
+        // {T}, Remove any number of storage counters from Mage-Ring Network: Add {C} to your mana pool for each storage counter removed this way.
         addCard(Zone.BATTLEFIELD, playerA, "Mage-Ring Network", 1);
         addCounters(1, PhaseStep.UPKEEP, playerA, "Mage-Ring Network", CounterType.STORAGE, 4);
         addCard(Zone.BATTLEFIELD, playerA, "Plains", 1);
@@ -325,7 +333,7 @@ public class ManaOptionsTest extends CardTestPlayerBase {
         ManaOptions manaOptions = playerA.getAvailableManaTest(currentGame);
 
         Assert.assertEquals("mana variations don't fit", 1, manaOptions.size());
-        Assert.assertEquals("{4}{W}{B}", getManaOption(0, manaOptions));
+        Assert.assertEquals("{C}{C}{C}{C}{W}{B}", getManaOption(0, manaOptions));
     }
 
     @Test

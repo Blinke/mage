@@ -68,8 +68,8 @@ public class SoldeviExcavations extends CardImpl {
         // If Soldevi Excavations would enter the battlefield, sacrifice an untapped Island instead. If you do, put Soldevi Excavations onto the battlefield. If you don't, put it into its owner's graveyard.
         this.addAbility(new SimpleStaticAbility(Zone.ALL, new EnterBattlefieldPayCostOrPutGraveyardEffect(new SacrificeTargetCost(new TargetControlledPermanent(filter)))));
 
-        // {tap}: Add {1}{U} to your mana pool.
-        this.addAbility(new SimpleManaAbility(Zone.BATTLEFIELD, new Mana(0, 0, 1, 0, 0, 1, 0), new TapSourceCost()));
+        // {tap}: Add {C}{U} to your mana pool.
+        this.addAbility(new SimpleManaAbility(Zone.BATTLEFIELD, new Mana(0, 0, 1, 0, 0, 0, 0, 1), new TapSourceCost()));
 
         // {1}, {tap}: Scry 1.
         Ability ability = new SimpleActivatedAbility(Zone.BATTLEFIELD, new ScryEffect(1), new GenericManaCost(1));

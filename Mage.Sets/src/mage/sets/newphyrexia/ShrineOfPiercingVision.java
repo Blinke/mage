@@ -28,11 +28,6 @@
 package mage.sets.newphyrexia;
 
 import java.util.UUID;
-import mage.constants.CardType;
-import mage.constants.Outcome;
-import mage.constants.Rarity;
-import mage.constants.TargetController;
-import mage.constants.Zone;
 import mage.ObjectColor;
 import mage.abilities.Ability;
 import mage.abilities.common.BeginningOfUpkeepTriggeredAbility;
@@ -46,6 +41,11 @@ import mage.cards.Card;
 import mage.cards.CardImpl;
 import mage.cards.Cards;
 import mage.cards.CardsImpl;
+import mage.constants.CardType;
+import mage.constants.Outcome;
+import mage.constants.Rarity;
+import mage.constants.TargetController;
+import mage.constants.Zone;
 import mage.counters.CounterType;
 import mage.filter.FilterCard;
 import mage.filter.FilterSpell;
@@ -116,19 +116,18 @@ class ShrineOfPiercingVisionEffect extends OneShotEffect {
         }
         int count = permanent.getCounters().getCount(CounterType.CHARGE);
 
-        Cards cards = new CardsImpl(Zone.PICK);
+        Cards cards = new CardsImpl();
         count = Math.min(player.getLibrary().size(), count);
         for (int i = 0; i < count; i++) {
             Card card = player.getLibrary().removeFromTop(game);
             if (card != null) {
                 cards.add(card);
-                game.setZone(card.getId(), Zone.PICK);
             }
         }
         player.lookAtCards("Shrine of Piercing Vision", cards, game);
 
         if (!cards.isEmpty()) {
-            TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put into your hand"));
+            TargetCard target = new TargetCard(Zone.LIBRARY, new FilterCard("card to put into your hand"));
 
             if (player.choose(Outcome.DrawCard, cards, target, game)) {
                 Card card = cards.get(target.getFirstTarget(), game);
@@ -138,22 +137,7 @@ class ShrineOfPiercingVisionEffect extends OneShotEffect {
                 }
             }
         }
-
-        TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put on the bottom of your library"));
-        while (player.canRespond() && cards.size() > 1) {
-            player.choose(Outcome.Neutral, cards, target, game);
-            Card card = cards.get(target.getFirstTarget(), game);
-            if (card != null) {
-                cards.remove(card);
-                card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, false);
-            }
-            target.clearChosen();
-        }
-        if (cards.size() == 1) {
-            Card card = cards.get(cards.iterator().next(), game);
-            card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, false);
-        }
-
+        player.putCardsOnBottomOfLibrary(cards, game, source, true);
         return true;
     }
 }

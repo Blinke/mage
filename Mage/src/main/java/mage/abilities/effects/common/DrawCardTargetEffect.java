@@ -27,6 +27,7 @@
  */
 package mage.abilities.effects.common;
 
+import java.util.UUID;
 import mage.abilities.Ability;
 import mage.abilities.Mode;
 import mage.abilities.dynamicvalue.DynamicValue;
@@ -35,6 +36,8 @@ import mage.abilities.effects.OneShotEffect;
 import mage.constants.Outcome;
 import mage.game.Game;
 import mage.players.Player;
+import mage.target.Target;
+import mage.target.targetpointer.SecondTargetPointer;
 import mage.util.CardUtil;
 
 /**
@@ -84,18 +87,19 @@ public class DrawCardTargetEffect extends OneShotEffect {
 
     @Override
     public boolean apply(Game game, Ability source) {
-        Player player = game.getPlayer(targetPointer.getFirst(game, source));
-        if (player != null) {
-            int cardsToDraw = amount.calculate(game, source, this);
-            if (upTo) {
-                cardsToDraw = player.getAmount(0, cardsToDraw, "Draw how many cards?", game);
+        for (UUID playerId : getTargetPointer().getTargets(game, source)) {
+            Player player = game.getPlayer(playerId);
+            if (player != null) {
+                int cardsToDraw = amount.calculate(game, source, this);
+                if (upTo) {
+                    cardsToDraw = player.getAmount(0, cardsToDraw, "Draw how many cards?", game);
+                }
+                if (!optional || player.chooseUse(outcome, "Use draw effect?", source, game)) {
+                    player.drawCards(cardsToDraw, game);
+                }
             }
-            if (!optional || player.chooseUse(outcome, "Use draw effect?", source, game)) {
-                player.drawCards(cardsToDraw, game);
-            }
-            return true;
         }
-        return false;
+        return true;
     }
 
     @Override
@@ -105,7 +109,13 @@ public class DrawCardTargetEffect extends OneShotEffect {
         }
         StringBuilder sb = new StringBuilder();
         if (mode.getTargets().size() > 0) {
-            sb.append("Target ").append(mode.getTargets().get(0).getTargetName());
+            Target target;
+            if (targetPointer instanceof SecondTargetPointer && mode.getTargets().size() > 1) {
+                target = mode.getTargets().get(1);
+            } else {
+                target = mode.getTargets().get(0);
+            }
+            sb.append("Target ").append(target.getTargetName());
         } else {
             sb.append("that player");
         }

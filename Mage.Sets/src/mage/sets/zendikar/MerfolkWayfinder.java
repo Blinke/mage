@@ -28,10 +28,6 @@
 package mage.sets.zendikar;
 
 import java.util.UUID;
-import mage.constants.CardType;
-import mage.constants.Outcome;
-import mage.constants.Rarity;
-import mage.constants.Zone;
 import mage.MageInt;
 import mage.abilities.Ability;
 import mage.abilities.common.EntersBattlefieldTriggeredAbility;
@@ -41,10 +37,12 @@ import mage.cards.Card;
 import mage.cards.CardImpl;
 import mage.cards.Cards;
 import mage.cards.CardsImpl;
-import mage.filter.FilterCard;
+import mage.constants.CardType;
+import mage.constants.Outcome;
+import mage.constants.Rarity;
+import mage.constants.Zone;
 import mage.game.Game;
 import mage.players.Player;
-import mage.target.TargetCard;
 
 /**
  *
@@ -98,7 +96,7 @@ class MerfolkWayfinderEffect extends OneShotEffect {
             return false;
         }
 
-        Cards cards = new CardsImpl(Zone.PICK);
+        Cards cards = new CardsImpl();
         Cards cardsToReveal = new CardsImpl();
         int count = Math.min(player.getLibrary().size(), 3);
         for (int i = 0; i < count; i++) {
@@ -109,27 +107,11 @@ class MerfolkWayfinderEffect extends OneShotEffect {
                     card.moveToZone(Zone.HAND, source.getSourceId(), game, false);
                 } else {
                     cards.add(card);
-                    game.setZone(card.getId(), Zone.PICK);
                 }
             }
         }
         player.revealCards("Merfolk Wayfinder", cardsToReveal, game);
-
-        TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put on the bottom of your library"));
-        while (player.canRespond() && cards.size() > 1) {
-            player.choose(Outcome.Neutral, cards, target, game);
-            Card card = cards.get(target.getFirstTarget(), game);
-            if (card != null) {
-                cards.remove(card);
-                card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, false);
-            }
-            target.clearChosen();
-        }
-        if (cards.size() == 1) {
-            Card card = cards.get(cards.iterator().next(), game);
-            card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, false);
-        }
-
+        player.putCardsOnBottomOfLibrary(cards, game, source, true);
         return true;
     }
 }

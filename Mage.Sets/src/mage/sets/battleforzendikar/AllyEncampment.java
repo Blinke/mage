@@ -52,21 +52,21 @@ import mage.target.common.TargetControlledCreaturePermanent;
  */
 public class AllyEncampment extends CardImpl {
 
-    private static final FilterSpell filter = new FilterSpell("an Ally spell");
+    private static final FilterSpell FILTER = new FilterSpell("an Ally spell");
 
     static {
-        filter.add(new SubtypePredicate("Ally"));
+        FILTER.add(new SubtypePredicate("Ally"));
     }
 
     public AllyEncampment(UUID ownerId) {
         super(ownerId, 228, "Ally Encampment", Rarity.RARE, new CardType[]{CardType.LAND}, "");
         this.expansionSetCode = "BFZ";
 
-        // {T}: Add {1} to your mana pool.
+        // {T}: Add {C} to your mana pool.
         this.addAbility(new ColorlessManaAbility());
 
         // {T} Add one mana of any color to your mana pool. Spend this mana only to cast an Ally spell.
-        this.addAbility(new ConditionalAnyColorManaAbility(new TapSourceCost(), 1, new ConditionalSpellManaBuilder(filter), true));
+        this.addAbility(new ConditionalAnyColorManaAbility(new TapSourceCost(), 1, new ConditionalSpellManaBuilder(FILTER), true));
 
         // {1}, {T}, Sacrifice Ally Encampment: Return target Ally you control to its owner's hand.
         Ability ability = new SimpleActivatedAbility(Zone.BATTLEFIELD, new ReturnToHandTargetEffect(), new GenericManaCost(1));

@@ -36,6 +36,7 @@ import mage.Mana;
 import mage.abilities.Ability;
 import mage.abilities.common.AsEntersBattlefieldAbility;
 import mage.abilities.common.SimpleStaticAbility;
+import mage.abilities.costs.Cost;
 import mage.abilities.costs.common.TapSourceCost;
 import mage.abilities.effects.ContinuousRuleModifyingEffectImpl;
 import mage.abilities.effects.common.ChooseCreatureTypeEffect;
@@ -69,7 +70,7 @@ public class CavernOfSouls extends CardImpl {
         // As Cavern of Souls enters the battlefield, choose a creature type.
         this.addAbility(new AsEntersBattlefieldAbility(new ChooseCreatureTypeEffect(Outcome.BoostCreature)));
 
-        // {T}: Add {1} to your mana pool.
+        // {T}: Add {C} to your mana pool.
         this.addAbility(new ColorlessManaAbility());
 
         // {T}: Add one mana of any color to your mana pool. Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered.
@@ -136,7 +137,7 @@ class CavernOfSoulsManaCondition extends CreatureCastManaCondition {
     }
 
     @Override
-    public boolean apply(Game game, Ability source, UUID manaProducer) {
+    public boolean apply(Game game, Ability source, UUID originalId, Cost costToPay) {
         // check: ... to cast a creature spell
         if (super.apply(game, source)) {
             // check: ... of the chosen type

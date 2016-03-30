@@ -62,6 +62,7 @@ import mage.server.game.DeckValidatorFactory;
 import mage.server.game.GameFactory;
 import mage.server.game.GameManager;
 import mage.server.game.PlayerFactory;
+import mage.server.record.TableRecorderImpl;
 import mage.server.services.LogKeys;
 import mage.server.services.impl.LogServiceImpl;
 import mage.server.tournament.TournamentController;
@@ -105,7 +106,7 @@ public class TableController {
         } else {
             controllerName = "System";
         }
-        table = new Table(roomId, options.getGameType(), options.getName(), controllerName, DeckValidatorFactory.getInstance().createDeckValidator(options.getDeckType()), options.getPlayerTypes(), match);
+        table = new Table(roomId, options.getGameType(), options.getName(), controllerName, DeckValidatorFactory.getInstance().createDeckValidator(options.getDeckType()), options.getPlayerTypes(), TableRecorderImpl.getInstance(), match);
         chatId = ChatManager.getInstance().createChatSession("Match Table " + table.getId());
         init();
     }
@@ -124,26 +125,26 @@ public class TableController {
         } else {
             controllerName = "System";
         }
-        table = new Table(roomId, options.getTournamentType(), options.getName(), controllerName, DeckValidatorFactory.getInstance().createDeckValidator(options.getMatchOptions().getDeckType()), options.getPlayerTypes(), tournament);
+        table = new Table(roomId, options.getTournamentType(), options.getName(), controllerName, DeckValidatorFactory.getInstance().createDeckValidator(options.getMatchOptions().getDeckType()), options.getPlayerTypes(), TableRecorderImpl.getInstance(), tournament);
         chatId = ChatManager.getInstance().createChatSession("Tourn. table " + table.getId());
     }
 
     private void init() {
         match.addTableEventListener(
                 new Listener<TableEvent>() {
-                    @Override
-                    public void event(TableEvent event) {
-                        try {
-                            switch (event.getEventType()) {
-                                case SIDEBOARD:
-                                    sideboard(event.getPlayerId(), event.getDeck());
-                                    break;
-                            }
-                        } catch (MageException ex) {
-                            logger.fatal("Table event listener error", ex);
-                        }
+            @Override
+            public void event(TableEvent event) {
+                try {
+                    switch (event.getEventType()) {
+                        case SIDEBOARD:
+                            sideboard(event.getPlayerId(), event.getDeck());
+                            break;
                     }
+                } catch (MageException ex) {
+                    logger.fatal("Table event listener error", ex);
                 }
+            }
+        }
         );
     }
 
@@ -169,7 +170,7 @@ public class TableController {
             }
         }
         if (userPlayerMap.containsKey(userId) && playerType.equals("Human")) {
-            user.showUserMessage("Join Table", new StringBuilder("You can join a table only one time.").toString());
+            user.showUserMessage("Join Table", "You can join a table only one time.");
             return false;
         }
         Deck deck = null;
@@ -193,6 +194,14 @@ public class TableController {
                 }
                 return false;
             }
+        }
+        // Check quit ratio.
+        int quitRatio = table.getTournament().getOptions().getQuitRatio();
+        if (quitRatio < user.getTourneyQuitRatio()) {
+            String message = new StringBuilder("Your quit ratio ").append(user.getTourneyQuitRatio())
+                    .append("% is higher than the table requirement ").append(quitRatio).append("%").toString();
+            user.showUserMessage("Join Table", message);
+            return false;
         }
 
         Player player = createPlayer(name, seat.getPlayerType(), skill);
@@ -237,6 +246,7 @@ public class TableController {
 
         TournamentPlayer newTournamentPlayer = tournament.getPlayer(newPlayer.getId());
         newTournamentPlayer.setState(oldTournamentPlayer.getState());
+        newTournamentPlayer.setReplacedTournamentPlayer(oldTournamentPlayer);
 
         DraftManager.getInstance().getController(table.getId()).replacePlayer(oldPlayer, newPlayer);
         return true;
@@ -282,6 +292,15 @@ public class TableController {
             }
             return false;
         }
+        // Check quit ratio.
+        int quitRatio = table.getMatch().getOptions().getQuitRatio();
+        if (quitRatio < user.getMatchQuitRatio()) {
+            String message = new StringBuilder("Your quit ratio ").append(user.getMatchQuitRatio())
+                    .append("% is higher than the table requirement ").append(quitRatio).append("%").toString();
+            user.showUserMessage("Join Table", message);
+            return false;
+        }
+
         Player player = createPlayer(name, seat.getPlayerType(), skill);
         if (player == null) {
             String message = new StringBuilder("Could not create player ").append(name).append(" of type ").append(seat.getPlayerType()).toString();
@@ -331,17 +350,15 @@ public class TableController {
             if (player == null || player.hasQuit()) {
                 return true; // so the construct panel closes after submit
             }
-        } else {
-            if (table.getMatch() != null) {
-                MatchPlayer mPlayer = table.getMatch().getPlayer(playerId);
-                if (mPlayer == null || mPlayer.hasQuit()) {
-                    return true; // so the construct panel closes after submit
-                }
-                if (table.isTournamentSubTable()) {
-                    TournamentPlayer tournamentPlayer = table.getTournament().getPlayer(mPlayer.getPlayer().getId());
-                    if (tournamentPlayer != null) {
-                        tournamentPlayer.setStateInfo(""); // reset sideboarding state
-                    }
+        } else if (table.getMatch() != null) {
+            MatchPlayer mPlayer = table.getMatch().getPlayer(playerId);
+            if (mPlayer == null || mPlayer.hasQuit()) {
+                return true; // so the construct panel closes after submit
+            }
+            if (table.isTournamentSubTable()) {
+                TournamentPlayer tournamentPlayer = table.getTournament().getPlayer(mPlayer.getPlayer().getId());
+                if (tournamentPlayer != null) {
+                    tournamentPlayer.setStateInfo(""); // reset sideboarding state
                 }
             }
         }
@@ -388,12 +405,10 @@ public class TableController {
             } else {
                 logger.fatal("Tournament == null  table: " + table.getId() + " userId: " + userId);
             }
+        } else if (TableState.SIDEBOARDING.equals(table.getState())) {
+            match.updateDeck(playerId, deck);
         } else {
-            if (TableState.SIDEBOARDING.equals(table.getState())) {
-                match.updateDeck(playerId, deck);
-            } else {
-                // deck was meanwhile submitted so the autoupdate can be ignored
-            }
+            // deck was meanwhile submitted so the autoupdate can be ignored
         }
     }
 
@@ -589,7 +604,9 @@ public class TableController {
             // log about game started
             logger.info("GAME started " + match.getGame().getId() + " [" + match.getName() + "] " + creator + " - " + opponent.toString());
             logger.debug("- matchId: " + match.getId() + " [" + match.getName() + "]");
-            logger.debug("- chatId:  " + GameManager.getInstance().getChatId(match.getGame().getId()));
+            if (match.getGame() != null) {
+                logger.debug("- chatId:  " + GameManager.getInstance().getChatId(match.getGame().getId()));
+            }
             LogServiceImpl.instance.log(LogKeys.KEY_GAME_STARTED, String.valueOf(userPlayerMap.size()), creator, opponent.toString());
         } catch (Exception ex) {
             logger.fatal("Error starting game table: " + table.getId(), ex);
@@ -789,11 +806,11 @@ public class TableController {
         if (seconds > 0) {
             futureTimeout = timeoutExecutor.schedule(
                     new Runnable() {
-                        @Override
-                        public void run() {
-                            autoSideboard();
-                        }
-                    },
+                @Override
+                public void run() {
+                    autoSideboard();
+                }
+            },
                     seconds, TimeUnit.SECONDS
             );
         }
@@ -883,6 +900,22 @@ public class TableController {
         return null;
     }
 
+    public boolean isUserStillActive(UUID userId) {
+        UUID playerId = userPlayerMap.get(userId);
+        if (playerId != null) {
+            if (tournament != null) {
+                TournamentPlayer tournamentPlayer = tournament.getPlayer(playerId);
+                if (tournamentPlayer != null) {
+                    return tournamentPlayer.isInTournament();
+                }
+            } else if (match != null) {
+                MatchPlayer matchPlayer = match.getPlayer(playerId);
+                return matchPlayer != null && !matchPlayer.hasQuit();
+            }
+        }
+        return false;
+    }
+
     public boolean isMatchTableStillValid() {
         // check only normal match table with state != Finished
         if (!table.isTournament()) {
@@ -894,13 +927,11 @@ public class TableController {
                     logger.debug("- Match table with no match:");
                     logger.debug("-- matchId:" + match.getId() + " [" + match.getName() + "]");
                     // return false;
-                } else {
-                    if (match.isDoneSideboarding() && match.getGame() == null) {
-                        // no sideboarding and not active game -> match seems to hang (maybe the Draw bug)
-                        logger.debug("- Match with no active game and not in sideboard state:");
-                        logger.debug("-- matchId:" + match.getId() + " [" + match.getName() + "]");
-                        // return false;
-                    }
+                } else if (match.isDoneSideboarding() && match.getGame() == null) {
+                    // no sideboarding and not active game -> match seems to hang (maybe the Draw bug)
+                    logger.debug("- Match with no active game and not in sideboard state:");
+                    logger.debug("-- matchId:" + match.getId() + " [" + match.getName() + "]");
+                    // return false;
                 }
             }
             // check for active players
@@ -957,26 +988,16 @@ public class TableController {
         return getTable().getState();
     }
 
-    public synchronized boolean changeTableState(TableState newTableState) {
-        switch (newTableState) {
-            case WAITING:
-                if (getTable().getState().equals(TableState.STARTING)) {
-                    // tournament already started
-                    return false;
-                }
-                break;
-            case STARTING:
-                if (!getTable().getState().equals(TableState.READY_TO_START)) {
-                    // tournament is not ready, can't start
-                    return false;
-                }
-                if (!table.allSeatsAreOccupied()) {
-                    logger.debug("Not alle Seats are occupied: stop start tableId:" + table.getId());
-                    return false;
-                }
-                break;
+    public synchronized boolean changeTableStateToStarting() {
+        if (!getTable().getState().equals(TableState.READY_TO_START)) {
+            // tournament is not ready, can't start
+            return false;
         }
-        getTable().setState(newTableState);
+        if (!table.allSeatsAreOccupied()) {
+            logger.debug("Not alle Seats are occupied: stop start tableId:" + table.getId());
+            return false;
+        }
+        getTable().setState(TableState.STARTING);
         return true;
     }
 }

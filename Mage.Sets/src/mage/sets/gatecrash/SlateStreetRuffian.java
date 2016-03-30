@@ -28,14 +28,14 @@
 package mage.sets.gatecrash;
 
 import java.util.UUID;
-import mage.constants.CardType;
-import mage.constants.Outcome;
-import mage.constants.Rarity;
 import mage.MageInt;
 import mage.abilities.Ability;
 import mage.abilities.common.BecomesBlockedByCreatureTriggeredAbility;
 import mage.abilities.effects.OneShotEffect;
 import mage.cards.CardImpl;
+import mage.constants.CardType;
+import mage.constants.Outcome;
+import mage.constants.Rarity;
 import mage.game.Game;
 import mage.game.permanent.Permanent;
 import mage.players.Player;
@@ -92,7 +92,7 @@ class SlateStreetRuffianDiscardEffect extends OneShotEffect {
         if (blockingCreature != null) {
             Player opponent = game.getPlayer(blockingCreature.getControllerId());
             if (opponent != null) {
-                opponent.discard(1, source, game);
+                opponent.discard(1, false, source, game);
                 return true;
             }
         }

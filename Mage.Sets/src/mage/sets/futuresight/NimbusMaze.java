@@ -31,6 +31,7 @@ import java.util.UUID;
 import mage.Mana;
 import mage.abilities.Ability;
 import mage.abilities.condition.common.PermanentsOnTheBattlefieldCondition;
+import mage.abilities.costs.Cost;
 import mage.abilities.costs.CostImpl;
 import mage.abilities.costs.common.TapSourceCost;
 import mage.abilities.effects.common.BasicManaEffect;
@@ -63,7 +64,7 @@ public class NimbusMaze extends CardImpl {
         super(ownerId, 178, "Nimbus Maze", Rarity.RARE, new CardType[]{CardType.LAND}, "");
         this.expansionSetCode = "FUT";
 
-        // {tap}: Add {1} to your mana pool.
+        // {tap}: Add {C} to your mana pool.
         this.addAbility(new ColorlessManaAbility());
         // {tap}: Add {W} to your mana pool. Activate this ability only if you control an Island.
         this.addAbility(new ActivateIfConditionManaAbility(
@@ -114,7 +115,7 @@ class FilterPermanentCost extends CostImpl {
     }
 
     @Override
-    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana) {
+    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana, Cost costToPay) {
         this.paid = true;
         return paid;
     }

@@ -34,6 +34,7 @@ import mage.MageObject;
 import mage.Mana;
 import mage.abilities.Ability;
 import mage.abilities.condition.Condition;
+import mage.abilities.costs.Cost;
 import mage.abilities.costs.common.TapSourceCost;
 import mage.abilities.mana.ConditionalColorlessManaAbility;
 import mage.abilities.mana.builder.ConditionalManaBuilder;
@@ -59,7 +60,7 @@ public class SoldeviMachinist extends CardImpl {
         this.power = new MageInt(1);
         this.toughness = new MageInt(1);
 
-        // {tap}: Add {2} to your mana pool. Spend this mana only to activate abilities of artifacts.
+        // {tap}: Add {C}{C} to your mana pool. Spend this mana only to activate abilities of artifacts.
         this.addAbility(new ConditionalColorlessManaAbility(new TapSourceCost(), 2, new SoldeviMachinistManaBuilder()));
     }
 
@@ -109,7 +110,7 @@ class ArtifactAbilityManaCondition extends ManaCondition implements Condition {
     }
 
     @Override
-    public boolean apply(Game game, Ability source, UUID originalId) {
+    public boolean apply(Game game, Ability source, UUID originalId, Cost costsToPay) {
         return apply(game, source);
     }
 }

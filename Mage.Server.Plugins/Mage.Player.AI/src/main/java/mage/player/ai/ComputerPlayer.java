@@ -56,6 +56,7 @@ import mage.abilities.SpellAbility;
 import mage.abilities.TriggeredAbility;
 import mage.abilities.costs.VariableCost;
 import mage.abilities.costs.mana.ColoredManaCost;
+import mage.abilities.costs.mana.ColorlessManaCost;
 import mage.abilities.costs.mana.GenericManaCost;
 import mage.abilities.costs.mana.HybridManaCost;
 import mage.abilities.costs.mana.ManaCost;
@@ -342,11 +343,9 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                     target.add(abilityControllerId, game);
                     return true;
                 }
-            } else {
-                if (target.canTarget(randomOpponentId, null, game)) {
-                    target.add(randomOpponentId, game);
-                    return true;
-                }
+            } else if (target.canTarget(randomOpponentId, null, game)) {
+                target.add(randomOpponentId, game);
+                return true;
             }
             if (!target.isRequired(sourceId, game)) {
                 return false;
@@ -377,11 +376,9 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                     target.add(abilityControllerId, game);
                     return true;
                 }
-            } else {
-                if (target.canTarget(randomOpponentId, null, game)) {
-                    target.add(randomOpponentId, game);
-                    return true;
-                }
+            } else if (target.canTarget(randomOpponentId, null, game)) {
+                target.add(randomOpponentId, game);
+                return true;
             }
             if (!target.isRequired(sourceId, game) || target.getNumberOfTargets() == 0) {
                 return false;
@@ -579,11 +576,9 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                         target.addTarget(abilityControllerId, source, game);
                         return true;
                     }
-                } else {
-                    if (target.canTarget(getId(), randomOpponentId, source, game)) {
-                        target.addTarget(randomOpponentId, source, game);
-                        return true;
-                    }
+                } else if (target.canTarget(getId(), randomOpponentId, source, game)) {
+                    target.addTarget(randomOpponentId, source, game);
+                    return true;
                 }
             }
 
@@ -605,11 +600,9 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                     target.addTarget(abilityControllerId, source, game);
                     return true;
                 }
-            } else {
-                if (target.canTarget(getId(), randomOpponentId, source, game)) {
-                    target.addTarget(randomOpponentId, source, game);
-                    return true;
-                }
+            } else if (target.canTarget(getId(), randomOpponentId, source, game)) {
+                target.addTarget(randomOpponentId, source, game);
+                return true;
             }
 
             //if (!target.isRequired())
@@ -1007,7 +1000,7 @@ public class ComputerPlayer extends PlayerImpl implements Player {
             if (card.getManaCost().getVariableCosts().size() > 0) {
                 //don't use variable mana costs unless there is at least 3 extra mana for X
                 for (Mana option : options) {
-                    option.add(Mana.ColorlessMana(3));
+                    option.add(Mana.GenericMana(3));
                 }
             }
             for (Mana mana : options) {
@@ -1023,10 +1016,8 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                                 playableNonInstant.add(card);
                             }
                         }
-                    } else {
-                        if (!playableInstant.contains(card) && !playableNonInstant.contains(card)) {
-                            unplayable.put(mana.needed(avail), card);
-                        }
+                    } else if (!playableInstant.contains(card) && !playableNonInstant.contains(card)) {
+                        unplayable.put(mana.needed(avail), card);
                     }
                 }
             }
@@ -1041,10 +1032,10 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                     if (ability.getManaCosts().getVariableCosts().size() > 0) {
                         //don't use variable mana costs unless there is at least 3 extra mana for X
                         for (Mana option : abilityOptions) {
-                            option.add(Mana.ColorlessMana(3));
+                            option.add(Mana.GenericMana(3));
                         }
                     }
-                    if (abilityOptions.size() == 0) {
+                    if (abilityOptions.isEmpty()) {
                         playableAbilities.add(ability);
                     } else {
                         for (Mana mana : abilityOptions) {
@@ -1062,7 +1053,7 @@ public class ComputerPlayer extends PlayerImpl implements Player {
             for (ActivatedAbility ability : card.getAbilities().getActivatedAbilities(Zone.GRAVEYARD)) {
                 if (ability.canActivate(playerId, game)) {
                     ManaOptions abilityOptions = ability.getManaCosts().getOptions();
-                    if (abilityOptions.size() == 0) {
+                    if (abilityOptions.isEmpty()) {
                         playableAbilities.add(ability);
                     } else {
                         for (Mana mana : abilityOptions) {
@@ -1095,7 +1086,7 @@ public class ComputerPlayer extends PlayerImpl implements Player {
 //        log.info("paying for " + unpaid.getText());
         boolean spendAnyMana = game.getContinuousEffects().asThough(ability.getSourceId(), AsThoughEffectType.SPEND_OTHER_MANA, ability, ability.getControllerId(), game);
         ManaCost cost;
-        List<Permanent> producers;
+        List<MageObject> producers;
         if (unpaid instanceof ManaCosts) {
             ManaCosts<ManaCost> manaCosts = (ManaCosts<ManaCost>) unpaid;
             cost = manaCosts.get(manaCosts.size() - 1);
@@ -1105,11 +1096,11 @@ public class ComputerPlayer extends PlayerImpl implements Player {
             producers = this.getAvailableManaProducers(game);
             producers.addAll(this.getAvailableManaProducersWithCost(game));
         }
-        for (Permanent perm : producers) {
+        for (MageObject mageObject : producers) {
             // use color producing mana abilities with costs first that produce all color manas that are needed to pay
             // otherwise the computer may not be able to pay the cost for that source
             ManaAbility:
-            for (ManaAbility manaAbility : perm.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
+            for (ManaAbility manaAbility : mageObject.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
                 int colored = 0;
                 for (Mana mana : manaAbility.getNetMana(game)) {
                     if (!unpaid.getMana().includesMana(mana)) {
@@ -1130,9 +1121,9 @@ public class ComputerPlayer extends PlayerImpl implements Player {
             }
         }
 
-        for (Permanent perm : producers) {
+        for (MageObject mageObject : producers) {
             // pay all colored costs first
-            for (ManaAbility manaAbility : perm.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
+            for (ManaAbility manaAbility : mageObject.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
                 if (cost instanceof ColoredManaCost) {
                     for (Mana netMana : manaAbility.getNetMana(game)) {
                         if (cost.testPay(netMana) || spendAnyMana) {
@@ -1144,7 +1135,7 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                 }
             }
             // then pay hybrid
-            for (ManaAbility manaAbility : perm.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
+            for (ManaAbility manaAbility : mageObject.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
                 if (cost instanceof HybridManaCost) {
                     for (Mana netMana : manaAbility.getNetMana(game)) {
                         if (cost.testPay(netMana) || spendAnyMana) {
@@ -1156,7 +1147,7 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                 }
             }
             // then pay mono hybrid
-            for (ManaAbility manaAbility : perm.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
+            for (ManaAbility manaAbility : mageObject.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
                 if (cost instanceof MonoHybridManaCost) {
                     for (Mana netMana : manaAbility.getNetMana(game)) {
                         if (cost.testPay(netMana) || spendAnyMana) {
@@ -1167,8 +1158,20 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                     }
                 }
             }
+            // pay colorless
+            for (ManaAbility manaAbility : mageObject.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
+                if (cost instanceof ColorlessManaCost) {
+                    for (Mana netMana : manaAbility.getNetMana(game)) {
+                        if (cost.testPay(netMana) || spendAnyMana) {
+                            if (activateAbility(manaAbility, game)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
             // finally pay generic
-            for (ManaAbility manaAbility : perm.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
+            for (ManaAbility manaAbility : mageObject.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
                 if (cost instanceof GenericManaCost) {
                     for (Mana netMana : manaAbility.getNetMana(game)) {
                         if (cost.testPay(netMana) || spendAnyMana) {
@@ -1182,7 +1185,7 @@ public class ComputerPlayer extends PlayerImpl implements Player {
         }
         // pay phyrexian life costs
         if (cost instanceof PhyrexianManaCost) {
-            if (cost.pay(null, game, null, playerId, false) || spendAnyMana) {
+            if (cost.pay(null, game, null, playerId, false, null) || spendAnyMana) {
                 return true;
             }
         }
@@ -1203,15 +1206,15 @@ public class ComputerPlayer extends PlayerImpl implements Player {
      * @param game
      * @return List<Permanent>
      */
-    private List<Permanent> getSortedProducers(ManaCosts<ManaCost> unpaid, Game game) {
-        List<Permanent> unsorted = this.getAvailableManaProducers(game);
+    private List<MageObject> getSortedProducers(ManaCosts<ManaCost> unpaid, Game game) {
+        List<MageObject> unsorted = this.getAvailableManaProducers(game);
         unsorted.addAll(this.getAvailableManaProducersWithCost(game));
-        Map<Permanent, Integer> scored = new HashMap<>();
-        for (Permanent permanent : unsorted) {
+        Map<MageObject, Integer> scored = new HashMap<>();
+        for (MageObject mageObject : unsorted) {
             int score = 0;
             for (ManaCost cost : unpaid) {
                 Abilities:
-                for (ManaAbility ability : permanent.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
+                for (ManaAbility ability : mageObject.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game)) {
                     for (Mana netMana : ability.getNetMana(game)) {
                         if (cost.testPay(netMana)) {
                             score++;
@@ -1221,29 +1224,29 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                 }
             }
             if (score > 0) { // score mana producers that produce other mana types and have other uses higher
-                score += permanent.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game).size();
-                score += permanent.getAbilities().getActivatedAbilities(Zone.BATTLEFIELD).size();
-                if (!permanent.getCardType().contains(CardType.LAND)) {
+                score += mageObject.getAbilities().getAvailableManaAbilities(Zone.BATTLEFIELD, game).size();
+                score += mageObject.getAbilities().getActivatedAbilities(Zone.BATTLEFIELD).size();
+                if (!mageObject.getCardType().contains(CardType.LAND)) {
                     score += 2;
-                } else if (permanent.getCardType().contains(CardType.CREATURE)) {
+                } else if (mageObject.getCardType().contains(CardType.CREATURE)) {
                     score += 2;
                 }
             }
-            scored.put(permanent, score);
+            scored.put(mageObject, score);
         }
         return sortByValue(scored);
     }
 
-    private List<Permanent> sortByValue(Map<Permanent, Integer> map) {
-        List<Entry<Permanent, Integer>> list = new LinkedList<>(map.entrySet());
-        Collections.sort(list, new Comparator<Entry<Permanent, Integer>>() {
+    private List<MageObject> sortByValue(Map<MageObject, Integer> map) {
+        List<Entry<MageObject, Integer>> list = new LinkedList<>(map.entrySet());
+        Collections.sort(list, new Comparator<Entry<MageObject, Integer>>() {
             @Override
-            public int compare(Entry<Permanent, Integer> o1, Entry<Permanent, Integer> o2) {
+            public int compare(Entry<MageObject, Integer> o1, Entry<MageObject, Integer> o2) {
                 return (o1.getValue().compareTo(o2.getValue()));
             }
         });
-        List<Permanent> result = new ArrayList<>();
-        for (Entry<Permanent, Integer> entry : list) {
+        List<MageObject> result = new ArrayList<>();
+        for (Entry<MageObject, Integer> entry : list) {
             result.add(entry.getKey());
         }
         return result;
@@ -1582,7 +1585,7 @@ public class ComputerPlayer extends PlayerImpl implements Player {
     }
 
     @Override
-    public List<Permanent> getAvailableManaProducers(Game game) {
+    public List<MageObject> getAvailableManaProducers(Game game) {
         return super.getAvailableManaProducers(game);
     }
 
@@ -2161,11 +2164,9 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                     target.add(randomOpponentId, game);
                     return true;
                 }
-            } else {
-                if (((TargetOpponent) target).canTarget(randomOpponentId, source, game)) {
-                    target.add(randomOpponentId, game);
-                    return true;
-                }
+            } else if (((TargetOpponent) target).canTarget(randomOpponentId, source, game)) {
+                target.add(randomOpponentId, game);
+                return true;
             }
             for (UUID currentId : game.getOpponents(abilityControllerId)) {
                 if (source == null) {
@@ -2173,11 +2174,9 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                         target.add(currentId, game);
                         return true;
                     }
-                } else {
-                    if (((TargetOpponent) target).canTarget(currentId, source, game)) {
-                        target.add(currentId, game);
-                        return true;
-                    }
+                } else if (((TargetOpponent) target).canTarget(currentId, source, game)) {
+                    target.add(currentId, game);
+                    return true;
                 }
             }
             return false;
@@ -2209,28 +2208,26 @@ public class ComputerPlayer extends PlayerImpl implements Player {
                     }
                 }
 
+            } else if (source == null) {
+                if (target.canTarget(randomOpponentId, game)) {
+                    target.add(randomOpponentId, game);
+                    return true;
+                }
+                if (target.isRequired(sourceId, game)) {
+                    if (target.canTarget(abilityControllerId, game)) {
+                        target.add(abilityControllerId, game);
+                        return true;
+                    }
+                }
             } else {
-                if (source == null) {
-                    if (target.canTarget(randomOpponentId, game)) {
-                        target.add(randomOpponentId, game);
+                if (target.canTarget(randomOpponentId, game)) {
+                    target.add(randomOpponentId, game);
+                    return true;
+                }
+                if (target.isRequired(sourceId, game)) {
+                    if (target.canTarget(abilityControllerId, game)) {
+                        target.add(abilityControllerId, game);
                         return true;
-                    }
-                    if (target.isRequired(sourceId, game)) {
-                        if (target.canTarget(abilityControllerId, game)) {
-                            target.add(abilityControllerId, game);
-                            return true;
-                        }
-                    }
-                } else {
-                    if (target.canTarget(randomOpponentId, game)) {
-                        target.add(randomOpponentId, game);
-                        return true;
-                    }
-                    if (target.isRequired(sourceId, game)) {
-                        if (target.canTarget(abilityControllerId, game)) {
-                            target.add(abilityControllerId, game);
-                            return true;
-                        }
                     }
                 }
             }

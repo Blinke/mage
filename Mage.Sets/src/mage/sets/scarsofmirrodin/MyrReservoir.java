@@ -27,9 +27,8 @@
  */
 package mage.sets.scarsofmirrodin;
 
+import java.util.UUID;
 import mage.ConditionalMana;
-import mage.constants.CardType;
-import mage.constants.Rarity;
 import mage.MageObject;
 import mage.Mana;
 import mage.abilities.Ability;
@@ -41,13 +40,13 @@ import mage.abilities.effects.common.BasicManaEffect;
 import mage.abilities.effects.common.ReturnToHandTargetEffect;
 import mage.abilities.mana.BasicManaAbility;
 import mage.cards.CardImpl;
+import mage.constants.CardType;
+import mage.constants.Rarity;
 import mage.constants.Zone;
 import mage.filter.FilterCard;
 import mage.filter.predicate.mageobject.SubtypePredicate;
 import mage.game.Game;
 import mage.target.common.TargetCardInYourGraveyard;
-
-import java.util.UUID;
 
 /**
  * @author nantuko
@@ -64,7 +63,7 @@ public class MyrReservoir extends CardImpl {
         super(ownerId, 183, "Myr Reservoir", Rarity.RARE, new CardType[]{CardType.ARTIFACT}, "{3}");
         this.expansionSetCode = "SOM";
 
-        // {tap}: Add {2} to your mana pool. Spend this mana only to cast Myr spells or activate abilities of Myr.
+        // {tap}: Add {C}{C} to your mana pool. Spend this mana only to cast Myr spells or activate abilities of Myr.
         this.addAbility(new MyrReservoirManaAbility());
 
         // {3}, {tap}: Return target Myr card from your graveyard to your hand.
@@ -88,7 +87,7 @@ class MyrReservoirManaAbility extends BasicManaAbility {
 
     MyrReservoirManaAbility() {
         super(new BasicManaEffect(new MyrConditionalMana()));
-        this.netMana.add(new Mana(0,0,0,0,0,2,0));
+        this.netMana.add(new Mana(0, 0, 0, 0, 0, 0, 0, 2));
     }
 
     MyrReservoirManaAbility(MyrReservoirManaAbility ability) {
@@ -111,6 +110,7 @@ class MyrConditionalMana extends ConditionalMana {
 }
 
 class MyrManaCondition implements Condition {
+
     @Override
     public boolean apply(Game game, Ability source) {
         MageObject object = game.getObject(source.getSourceId());

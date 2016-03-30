@@ -25,15 +25,19 @@
  *  authors and should not be interpreted as representing official policies, either expressed
  *  or implied, of BetaSteward_at_googlemail.com.
  */
-
 package mage.abilities.effects.common;
 
+import java.util.UUID;
 import mage.abilities.Ability;
 import mage.abilities.effects.OneShotEffect;
 import mage.cards.Card;
+import mage.cards.CardsImpl;
 import mage.constants.Outcome;
 import mage.constants.Zone;
+import mage.game.ExileZone;
 import mage.game.Game;
+import mage.players.Player;
+import mage.util.CardUtil;
 
 /**
  *
@@ -41,13 +45,28 @@ import mage.game.Game;
  */
 public class ReturnToBattlefieldUnderOwnerControlTargetEffect extends OneShotEffect {
 
+    private boolean tapped;
+    protected boolean fromExileZone;
+
     public ReturnToBattlefieldUnderOwnerControlTargetEffect() {
+        this(false);
+    }
+
+    public ReturnToBattlefieldUnderOwnerControlTargetEffect(boolean tapped) {
+        this(tapped, false);
+    }
+
+    public ReturnToBattlefieldUnderOwnerControlTargetEffect(boolean tapped, boolean fromExileZone) {
         super(Outcome.Benefit);
         staticText = "return that card to the battlefield under its owner's control";
+        this.tapped = tapped;
+        this.fromExileZone = fromExileZone;
     }
 
     public ReturnToBattlefieldUnderOwnerControlTargetEffect(final ReturnToBattlefieldUnderOwnerControlTargetEffect effect) {
         super(effect);
+        this.tapped = effect.tapped;
+        this.fromExileZone = effect.fromExileZone;
     }
 
     @Override
@@ -57,14 +76,26 @@ public class ReturnToBattlefieldUnderOwnerControlTargetEffect extends OneShotEff
 
     @Override
     public boolean apply(Game game, Ability source) {
-        Card card = game.getCard(targetPointer.getFirst(game, source));
-        if (card != null) {
-            Zone currentZone = game.getState().getZone(card.getId());
-            if (card.putOntoBattlefield(game, currentZone, source.getSourceId(), card.getOwnerId())) {
+        Player controller = game.getPlayer(source.getControllerId());
+        if (controller != null) {
+            Card card = null;
+            if (fromExileZone) {
+                UUID exilZoneId = CardUtil.getExileZoneId(game, source.getSourceId(), source.getSourceObjectZoneChangeCounter());
+                if (exilZoneId != null) {
+                    ExileZone exileZone = game.getExile().getExileZone(exilZoneId);
+                    if (exileZone != null && getTargetPointer().getFirst(game, source) != null) {
+                        card = exileZone.get(getTargetPointer().getFirst(game, source), game);
+                    }
+                }
+            } else {
+                card = game.getCard(getTargetPointer().getFirst(game, source));
+            }
+            if (card != null) {
+                controller.moveCards(new CardsImpl(card).getCards(game),
+                        Zone.BATTLEFIELD, source, game, tapped, false, true, null);
                 return true;
             }
         }
         return false;
     }
-
 }

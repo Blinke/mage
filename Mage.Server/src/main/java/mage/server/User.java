@@ -39,13 +39,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import mage.cards.decks.Deck;
 import mage.constants.ManaType;
+import mage.constants.TableState;
 import mage.game.Table;
+import mage.game.result.ResultProtos;
 import mage.game.tournament.TournamentPlayer;
 import mage.interfaces.callback.ClientCallback;
 import mage.players.net.UserData;
 import mage.server.draft.DraftSession;
 import mage.server.game.GameManager;
 import mage.server.game.GameSessionPlayer;
+import mage.server.record.UserStats;
+import mage.server.record.UserStatsRepository;
 import mage.server.tournament.TournamentController;
 import mage.server.tournament.TournamentManager;
 import mage.server.tournament.TournamentSession;
@@ -59,7 +63,7 @@ import org.apache.log4j.Logger;
  */
 public class User {
 
-    private static final Logger logger = Logger.getLogger(User.class);
+    private static final Logger LOGGER = Logger.getLogger(User.class);
 
     public enum UserState {
 
@@ -79,11 +83,11 @@ public class User {
     private final Map<UUID, Deck> sideboarding;
     private final List<UUID> watchedGames;
     private String sessionId;
-    private String info = "";
     private String pingInfo = "";
     private Date lastActivity;
     private UserState userState;
     private UserData userData;
+    private UserStats userStats;
 
     public User(String userName, String host) {
         this.userId = UUID.randomUUID();
@@ -103,6 +107,7 @@ public class User {
         this.watchedGames = new ArrayList<>();
         this.tablesToDelete = new ArrayList<>();
         this.sessionId = "";
+        this.userStats = null;
     }
 
     public String getName() {
@@ -126,15 +131,15 @@ public class User {
         if (sessionId.isEmpty()) {
             userState = UserState.Disconnected;
             lostConnection();
-            logger.trace("USER - lost connection: " + userName + " id: " + userId);
+            LOGGER.trace("USER - lost connection: " + userName + " id: " + userId);
 
         } else if (userState == UserState.Created) {
             userState = UserState.Connected;
-            logger.trace("USER - created: " + userName + " id: " + userId);
+            LOGGER.trace("USER - created: " + userName + " id: " + userId);
         } else {
             userState = UserState.Reconnected;
             reconnect();
-            logger.trace("USER - reconnected: " + userName + " id: " + userId);
+            LOGGER.trace("USER - reconnected: " + userName + " id: " + userId);
         }
     }
 
@@ -270,12 +275,13 @@ public class User {
 
     public boolean isExpired(Date expired) {
         if (lastActivity.before(expired)) {
-            logger.trace(userName + " is expired!");
+            LOGGER.trace(userName + " is expired!");
             userState = UserState.Expired;
             return true;
         }
-        logger.trace(new StringBuilder("isExpired: User ").append(userName).append(" lastActivity: ").append(lastActivity).append(" expired: ").append(expired).toString());
-        return false; /*userState == UserState.Disconnected && */
+        LOGGER.trace(new StringBuilder("isExpired: User ").append(userName).append(" lastActivity: ").append(lastActivity).append(" expired: ").append(expired).toString());
+        return false;
+        /*userState == UserState.Disconnected && */
 
     }
 
@@ -357,35 +363,35 @@ public class User {
     }
 
     public void remove(DisconnectReason reason) {
-        logger.trace("REMOVE " + getName() + " Draft sessions " + draftSessions.size());
+        LOGGER.trace("REMOVE " + getName() + " Draft sessions " + draftSessions.size());
         for (DraftSession draftSession : draftSessions.values()) {
             draftSession.setKilled();
         }
         draftSessions.clear();
-        logger.trace("REMOVE " + getName() + " Tournament sessions " + userTournaments.size());
+        LOGGER.trace("REMOVE " + getName() + " Tournament sessions " + userTournaments.size());
         for (UUID tournamentId : userTournaments.values()) {
             TournamentManager.getInstance().quit(tournamentId, getId());
         }
         userTournaments.clear();
-        logger.trace("REMOVE " + getName() + " Tables " + tables.size());
+        LOGGER.trace("REMOVE " + getName() + " Tables " + tables.size());
         for (Entry<UUID, Table> entry : tables.entrySet()) {
-            logger.debug("-- leave tableId: " + entry.getValue().getId());
+            LOGGER.debug("-- leave tableId: " + entry.getValue().getId());
             TableManager.getInstance().leaveTable(userId, entry.getValue().getId());
         }
         tables.clear();
-        logger.trace("REMOVE " + getName() + " Game sessions: " + gameSessions.size());
+        LOGGER.trace("REMOVE " + getName() + " Game sessions: " + gameSessions.size());
         for (GameSessionPlayer gameSessionPlayer : gameSessions.values()) {
-            logger.debug("-- kill game session of gameId: " + gameSessionPlayer.getGameId());
+            LOGGER.debug("-- kill game session of gameId: " + gameSessionPlayer.getGameId());
             GameManager.getInstance().quitMatch(gameSessionPlayer.getGameId(), userId);
             gameSessionPlayer.quitGame();
         }
         gameSessions.clear();
-        logger.trace("REMOVE " + getName() + " watched Games " + watchedGames.size());
+        LOGGER.trace("REMOVE " + getName() + " watched Games " + watchedGames.size());
         for (UUID gameId : watchedGames) {
             GameManager.getInstance().stopWatching(gameId, userId);
         }
         watchedGames.clear();
-        logger.trace("REMOVE " + getName() + " Chats ");
+        LOGGER.trace("REMOVE " + getName() + " Chats ");
         ChatManager.getInstance().removeUser(userId, reason);
     }
 
@@ -394,6 +400,7 @@ public class User {
             this.userData.update(userData);
         } else {
             this.userData = userData;
+            resetUserStats();
         }
     }
 
@@ -443,11 +450,11 @@ public class User {
                                 }
                             } else {
                                 // can happen if tournamet has just ended
-                                logger.debug(getName() + " tournament player missing - tableId:" + table.getId(), null);
+                                LOGGER.debug(getName() + " tournament player missing - tableId:" + table.getId(), null);
                                 tablesToDelete.add(tableEntry.getKey());
                             }
                         } else {
-                            logger.error(getName() + " tournament key missing - tableId: " + table.getId(), null);
+                            LOGGER.error(getName() + " tournament key missing - tableId: " + table.getId(), null);
                         }
                     } else {
                         switch (table.getState()) {
@@ -497,14 +504,6 @@ public class User {
         return sb.toString();
     }
 
-    public String getInfo() {
-        return info;
-    }
-
-    public void setInfo(String Info) {
-        this.info = Info;
-    }
-
     public void addGameWatchInfo(UUID gameId) {
         watchedGames.add(gameId);
     }
@@ -525,4 +524,152 @@ public class User {
         }
     }
 
+    public void resetUserStats() {
+        if (userData == null) {
+            return;
+        }
+        userStats = UserStatsRepository.instance.getUser(this.userName);
+        if (userStats != null) {
+            userData.setMatchHistory(userStatsToMatchHistory(userStats.getProto()));
+            userData.setMatchQuitRatio(userStatsToMatchQuitRatio(userStats.getProto()));
+            userData.setTourneyHistory(userStatsToTourneyHistory(userStats.getProto()));
+            userData.setTourneyQuitRatio(userStatsToTourneyQuitRatio(userStats.getProto()));
+        } else {
+            userData.setMatchHistory("0");
+            userData.setMatchQuitRatio(0);
+            userData.setTourneyHistory("0");
+            userData.setTourneyQuitRatio(0);
+        }
+    }
+
+    public String getMatchHistory() {
+        if (userData != null) {
+            return userData.getMatchHistory();
+        }
+        return "<not available>";
+    }
+
+    public int getMatchQuitRatio() {
+        if (userData != null) {
+            return userData.getMatchQuitRatio();
+        }
+        return 0;
+    }
+
+    public String getTourneyHistory() {
+        if (userData != null) {
+            return userData.getTourneyHistory();
+        }
+        return "<not available>";
+    }
+
+    public static String userStatsToHistory(ResultProtos.UserStatsProto proto) {
+        return "Matches:" + userStatsToMatchHistory(proto)
+                + " Tourneys: " + userStatsToTourneyHistory(proto);
+    }
+
+    public int getTourneyQuitRatio() {
+        if (userData != null) {
+            return userData.getTourneyQuitRatio();
+        }
+        return 0;
+    }
+
+    public static String userStatsToMatchHistory(ResultProtos.UserStatsProto proto) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(proto.getMatches());
+        List<String> quit = new ArrayList<>();
+        if (proto.getMatchesIdleTimeout() > 0) {
+            quit.add("I:" + Integer.toString(proto.getMatchesIdleTimeout()));
+        }
+        if (proto.getMatchesTimerTimeout() > 0) {
+            quit.add("T:" + Integer.toString(proto.getMatchesTimerTimeout()));
+        }
+        if (proto.getMatchesQuit() > 0) {
+            quit.add("Q:" + Integer.toString(proto.getMatchesQuit()));
+        }
+        if (quit.size() > 0) {
+            builder.append(" (");
+            joinStrings(builder, quit, " ");
+            builder.append(")");
+        }
+        return builder.toString();
+    }
+
+    public static int userStatsToMatchQuitRatio(ResultProtos.UserStatsProto proto) {
+        int matches = proto.getMatches();
+        if (matches == 0) {
+            return 0;
+        }
+        int quits = proto.getMatchesIdleTimeout()
+                + proto.getMatchesTimerTimeout()
+                + proto.getMatchesQuit();
+        return 100 * quits / matches;
+    }
+
+    public static String userStatsToTourneyHistory(ResultProtos.UserStatsProto proto) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(proto.getTourneys());
+        List<String> quit = new ArrayList<>();
+        if (proto.getTourneysQuitDuringDrafting() > 0) {
+            quit.add("D:" + Integer.toString(proto.getTourneysQuitDuringDrafting()));
+        }
+        if (proto.getTourneysQuitDuringConstruction() > 0) {
+            quit.add("C:" + Integer.toString(proto.getTourneysQuitDuringConstruction()));
+        }
+        if (proto.getTourneysQuitDuringRound() > 0) {
+            quit.add("R:" + Integer.toString(proto.getTourneysQuitDuringRound()));
+        }
+        if (quit.size() > 0) {
+            builder.append(" (");
+            joinStrings(builder, quit, " ");
+            builder.append(")");
+        }
+        return builder.toString();
+    }
+
+    public static int userStatsToTourneyQuitRatio(ResultProtos.UserStatsProto proto) {
+        int tourneys = proto.getTourneys();
+        if (tourneys == 0) {
+            return 0;
+        }
+        int quits = proto.getTourneysQuitDuringDrafting()
+                + proto.getTourneysQuitDuringConstruction()
+                + proto.getTourneysQuitDuringRound();
+        return 100 * quits / tourneys;
+    }
+
+    private static void joinStrings(StringBuilder joined, List<String> strings, String separator) {
+        for (int i = 0; i < strings.size(); ++i) {
+            if (i > 0) {
+                joined.append(separator);
+            }
+            joined.append(strings.get(i));
+        }
+    }
+
+    public int getNumberOfNotStartedTables() {
+        int number = 0;
+        for (Table table : tables.values()) {
+            if (table.getState().equals(TableState.WAITING) || table.getState().equals(TableState.STARTING)) {
+                number++;
+            }
+        }
+        return number;
+    }
+
+    public int getNumberOfNotFinishedTables() {
+        int number = 0;
+        for (Table table : tables.values()) {
+            if (table.getState().equals(TableState.FINISHED)) {
+                number++;
+            } else {
+                TableController tableController = TableManager.getInstance().getController(table.getId());
+                if (tableController != null && tableController.isUserStillActive(userId)) {
+                    number++;
+                }
+            }
+        }
+        return number;
+    }
 }

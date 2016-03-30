@@ -28,17 +28,16 @@
 package mage.sets.shardsofalara;
 
 import java.util.UUID;
-import mage.constants.CardType;
-import mage.constants.Outcome;
-import mage.constants.Rarity;
-import mage.constants.Zone;
 import mage.abilities.Ability;
 import mage.abilities.effects.OneShotEffect;
 import mage.cards.Card;
 import mage.cards.CardImpl;
 import mage.cards.Cards;
 import mage.cards.CardsImpl;
-import mage.filter.FilterCard;
+import mage.constants.CardType;
+import mage.constants.Outcome;
+import mage.constants.Rarity;
+import mage.constants.Zone;
 import mage.filter.common.FilterCreatureCard;
 import mage.filter.common.FilterLandCard;
 import mage.game.Game;
@@ -93,7 +92,7 @@ class GiftOfTheGargantuanEffect extends OneShotEffect {
             return false;
         }
 
-        Cards cards = new CardsImpl(Zone.PICK);
+        Cards cards = new CardsImpl();
         boolean creatureCardFound = false;
         boolean landCardFound = false;
         int count = Math.min(player.getLibrary().size(), 4);
@@ -101,7 +100,6 @@ class GiftOfTheGargantuanEffect extends OneShotEffect {
             Card card = player.getLibrary().removeFromTop(game);
             if (card != null) {
                 cards.add(card);
-                game.setZone(card.getId(), Zone.PICK);
                 if (card.getCardType().contains(CardType.CREATURE)) {
                     creatureCardFound = true;
                 }
@@ -115,7 +113,7 @@ class GiftOfTheGargantuanEffect extends OneShotEffect {
         if ((creatureCardFound || landCardFound) && player.chooseUse(Outcome.DrawCard, "Do you wish to reveal a creature card and/or a land card and put them into your hand?", source, game)) {
             Cards revealedCards = new CardsImpl();
 
-            TargetCard target = new TargetCard(Zone.PICK, new FilterCreatureCard("creature card to reveal and put into your hand"));
+            TargetCard target = new TargetCard(Zone.LIBRARY, new FilterCreatureCard("creature card to reveal and put into your hand"));
             if (creatureCardFound && player.choose(Outcome.DrawCard, cards, target, game)) {
                 Card card = cards.get(target.getFirstTarget(), game);
                 if (card != null) {
@@ -125,7 +123,7 @@ class GiftOfTheGargantuanEffect extends OneShotEffect {
                 }
             }
 
-            target = new TargetCard(Zone.PICK, new FilterLandCard("land card to reveal and put into your hand"));
+            target = new TargetCard(Zone.LIBRARY, new FilterLandCard("land card to reveal and put into your hand"));
             if (landCardFound && player.choose(Outcome.DrawCard, cards, target, game)) {
                 Card card = cards.get(target.getFirstTarget(), game);
                 if (card != null) {
@@ -139,22 +137,7 @@ class GiftOfTheGargantuanEffect extends OneShotEffect {
                 player.revealCards("Gift of the Gargantuan", revealedCards, game);
             }
         }
-
-        TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put on the bottom of your library"));
-        while (player.canRespond() && cards.size() > 1) {
-            player.choose(Outcome.Neutral, cards, target, game);
-            Card card = cards.get(target.getFirstTarget(), game);
-            if (card != null) {
-                cards.remove(card);
-                card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, false);
-            }
-            target.clearChosen();
-        }
-        if (cards.size() == 1) {
-            Card card = cards.get(cards.iterator().next(), game);
-            card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, false);
-        }
-
+        player.putCardsOnBottomOfLibrary(cards, game, source, true);
         return true;
     }
 }

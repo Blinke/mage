@@ -34,7 +34,7 @@ import org.mage.test.serverside.base.CardTestPlayerBase;
 
 /**
  *
- * @author LevelX2
+ * @author LevelX2, icetc
  */
 public class BlockRequirementTest extends CardTestPlayerBase {
 
@@ -112,4 +112,111 @@ public class BlockRequirementTest extends CardTestPlayerBase {
         assertGraveyardCount(playerA, "Bog Wraith", 1);
     }
 
+    /**
+     * Elemental Uprising - "it must be blocked this turn if able", not working
+     *
+     * The bug just happened for me today as well - the problem is "must be
+     * blocked" is not being enforced correctly. During opponent's main phase he
+     * casted Elemental Uprising targeting an untapped land. He attacked with
+     * two creatures, I had one creature to block with, and did not block the
+     * land-creature targeted by Elemental Uprising. Instead I blocked a 2/2 of
+     * his with my 2/3. I should have been forced to block the land targeted by
+     * Elemental Uprising.
+     */
+    @Test
+    public void testElementalUprising() {
+        addCard(Zone.BATTLEFIELD, playerA, "Forest", 2);
+        addCard(Zone.BATTLEFIELD, playerA, "Mountain", 1);
+
+        addCard(Zone.BATTLEFIELD, playerA, "Silvercoat Lion"); // 2/2
+        // Target land you control becomes a 4/4 Elemental creature with haste until end of turn. It's still a land. It must be blocked this turn if able.
+        addCard(Zone.HAND, playerA, "Elemental Uprising");
+
+        addCard(Zone.BATTLEFIELD, playerB, "Pillarfield Ox"); // 2/4
+
+        activateManaAbility(1, PhaseStep.PRECOMBAT_MAIN, playerA, "{T}: Add {G}");
+        activateManaAbility(1, PhaseStep.PRECOMBAT_MAIN, playerA, "{T}: Add {G}");
+
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Elemental Uprising", "Mountain");
+
+        // Silvercoat Lion has not to block because it has to pay {3} to block
+        attack(1, playerA, "Mountain");
+        attack(1, playerA, "Silvercoat Lion");
+        block(1, playerB, "Pillarfield Ox", "Silvercoat Lion"); // Not allowed, the Mountain has to be blocked
+
+        setStopAt(1, PhaseStep.POSTCOMBAT_MAIN);
+        execute();
+
+        assertGraveyardCount(playerA, "Elemental Uprising", 1);
+        assertPowerToughness(playerA, "Mountain", 4, 4);
+
+        assertPermanentCount(playerA, "Silvercoat Lion", 1);
+        assertGraveyardCount(playerB, "Pillarfield Ox", 1);
+
+        assertLife(playerB, 18);
+    }
+
+    /**
+     * Okk is red creature that can't block unless a creature with greater power
+     * also blocks.
+     */
+    @Test
+    public void testOkkBlocking() {
+
+        // 3/3 Vanilla creature
+        addCard(Zone.BATTLEFIELD, playerA, "Hill Giant", 1);
+
+        // 4/4 Goblin:
+        // Okk can't attack unless a creature with greater power also attacks.
+        // Okk can't block unless a creature with greater power also blocks.
+        addCard(Zone.BATTLEFIELD, playerB, "Okk", 1); //
+
+        attack(1, playerA, "Hill Giant");
+
+        // Not allowed because of Okk's blocking restrictions
+        block(1, playerB, "Okk", "Hill Giant");
+
+        setStopAt(1, PhaseStep.POSTCOMBAT_MAIN);
+        execute();
+
+        // Hill giant is still alive and Played B loses 3 lives
+        assertPermanentCount(playerA, "Hill Giant", 1);
+        assertLife(playerB, 17);
+    }
+
+    /**
+     * Reported bug: When Breaker of Armies is granted Menace and there is only
+     * 1 valid blocker, the game enters a state that cannot be continued. He
+     * must be blocked by all creatures that are able, however, with menace the
+     * only valid blocks would be by more than one creature, so the expected
+     * behavior is no blocks can be made.
+     */
+    @Test
+    public void testBreakerOfArmiesWithMenace() {
+
+        // {8}
+        // All creatures able to block Breaker of Armies do so.
+        addCard(Zone.BATTLEFIELD, playerA, "Breaker of Armies", 1); // 10/8
+
+        // 3/3 Vanilla creature
+        addCard(Zone.BATTLEFIELD, playerB, "Hill Giant", 1);
+
+        addCard(Zone.BATTLEFIELD, playerA, "Swamp", 8);
+        // {2}{B} Enchanted creature gets +2/+1 and has menace.
+        addCard(Zone.HAND, playerA, "Untamed Hunger", 1);
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Untamed Hunger", "Breaker of Armies");
+
+        attack(1, playerA, "Breaker of Armies");
+
+        // not allowed due to Breaker of Armies having menace
+        block(1, playerB, "Hill Giant", "Breaker of Armies");
+
+        setStopAt(1, PhaseStep.POSTCOMBAT_MAIN);
+        execute();
+
+        // Hill giant is still alive
+        assertPermanentCount(playerB, "Hill Giant", 1);
+        // Player B was unable to block, so goes down to 10 life
+        assertLife(playerB, 8);
+    }
 }

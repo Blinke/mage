@@ -34,7 +34,7 @@ import mage.players.Player;
  */
 public class EpicEffect extends OneShotEffect {
 
-    final String rule = "<br><br/>Epic <i>(For the rest of the game, you can't cast spells.  At the beginning of each of your upkeeps for the rest of the game, copy this spell except for its epic ability.  If the spell has targets, you may choose new targets for the copy)";
+    final String rule = "<br>Epic <i>(For the rest of the game, you can't cast spells.  At the beginning of each of your upkeeps for the rest of the game, copy this spell except for its epic ability.  If the spell has targets, you may choose new targets for the copy)";
 
     public EpicEffect() {
         super(Outcome.Benefit);
@@ -51,9 +51,7 @@ public class EpicEffect extends OneShotEffect {
         if (controller != null) {
             StackObject stackObject = game.getStack().getStackObject(source.getId());
             Spell spell = (Spell) stackObject;
-            spell = spell.copySpell();
-            spell.setCopiedSpell(true);
-            spell.setControllerId(source.getControllerId());
+            spell = spell.copySpell(source.getControllerId());
             // Remove Epic effect from the spell
             Effect epicEffect = null;
             for (Effect effect : spell.getSpellAbility().getEffects()) {
@@ -64,9 +62,7 @@ public class EpicEffect extends OneShotEffect {
             }
             spell.getSpellAbility().getEffects().remove(epicEffect);
             DelayedTriggeredAbility ability = new AtTheBeginOfYourNextUpkeepDelayedTriggeredAbility(new EpicPushEffect(spell, rule), Duration.EndOfGame, false);
-            ability.setSourceId(source.getSourceId());
-            ability.setControllerId(source.getControllerId());
-            game.addDelayedTriggeredAbility(ability);
+            game.addDelayedTriggeredAbility(ability, source);
             game.addEffect(new EpicReplacementEffect(), source);
             return true;
         }
@@ -104,7 +100,7 @@ class EpicReplacementEffect extends ContinuousRuleModifyingEffectImpl {
     public String getInfoMessage(Ability source, GameEvent event, Game game) {
         MageObject mageObject = game.getObject(source.getSourceId());
         if (mageObject != null) {
-            return "For the rest of the game, you can't cast spells (Epic - " + mageObject.getName() +")";
+            return "For the rest of the game, you can't cast spells (Epic - " + mageObject.getName() + ")";
         }
         return null;
     }

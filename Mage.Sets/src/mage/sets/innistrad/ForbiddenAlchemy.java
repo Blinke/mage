@@ -28,11 +28,6 @@
 package mage.sets.innistrad;
 
 import java.util.UUID;
-import mage.constants.CardType;
-import mage.constants.Outcome;
-import mage.constants.Rarity;
-import mage.constants.TimingRule;
-import mage.constants.Zone;
 import mage.abilities.Ability;
 import mage.abilities.costs.mana.ManaCostsImpl;
 import mage.abilities.effects.OneShotEffect;
@@ -41,6 +36,11 @@ import mage.cards.Card;
 import mage.cards.CardImpl;
 import mage.cards.Cards;
 import mage.cards.CardsImpl;
+import mage.constants.CardType;
+import mage.constants.Outcome;
+import mage.constants.Rarity;
+import mage.constants.TimingRule;
+import mage.constants.Zone;
 import mage.filter.FilterCard;
 import mage.game.Game;
 import mage.players.Player;
@@ -94,20 +94,19 @@ class ForbiddenAlchemyEffect extends OneShotEffect {
         Player player = game.getPlayer(source.getControllerId());
 
         if (player != null) {
-            Cards cards = new CardsImpl(Zone.PICK);
+            Cards cards = new CardsImpl();
             int cardsCount = Math.min(4, player.getLibrary().size());
             for (int i = 0; i < cardsCount; i++) {
                 Card card = player.getLibrary().removeFromTop(game);
                 if (card != null) {
                     cards.add(card);
-                    game.setZone(card.getId(), Zone.PICK);
                 }
             }
 
             if (cards.size() > 0) {
                 player.lookAtCards("Forbidden Alchemy", cards, game);
 
-                TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put in your hand"));
+                TargetCard target = new TargetCard(Zone.LIBRARY, new FilterCard("card to put in your hand"));
                 if (player.choose(Outcome.Benefit, cards, target, game)) {
                     Card card = cards.get(target.getFirstTarget(), game);
                     if (card != null) {

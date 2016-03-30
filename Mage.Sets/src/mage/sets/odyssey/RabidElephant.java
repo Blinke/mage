@@ -29,7 +29,11 @@ package mage.sets.odyssey;
 
 import java.util.UUID;
 import mage.MageInt;
-import mage.abilities.common.BecomesBlockedByCreatureTriggeredAbility;
+import mage.abilities.common.BecomesBlockedTriggeredAbility;
+import mage.abilities.dynamicvalue.DynamicValue;
+import mage.abilities.dynamicvalue.MultipliedValue;
+import mage.abilities.dynamicvalue.common.BlockedCreatureCount;
+import mage.abilities.effects.Effect;
 import mage.abilities.effects.common.continuous.BoostSourceEffect;
 import mage.cards.CardImpl;
 import mage.constants.CardType;
@@ -51,7 +55,10 @@ public class RabidElephant extends CardImpl {
         this.toughness = new MageInt(4);
 
         // Whenever Rabid Elephant becomes blocked, it gets +2/+2 until end of turn for each creature blocking it.
-        this.addAbility(new BecomesBlockedByCreatureTriggeredAbility(new BoostSourceEffect(2, 2, Duration.EndOfTurn), false));
+        DynamicValue value = new MultipliedValue(new BlockedCreatureCount(), 2);
+        Effect effect = new BoostSourceEffect(value, value, Duration.EndOfTurn, true);
+        effect.setText("it gets +2/+2 until end of turn for each creature blocking it");
+        this.addAbility(new BecomesBlockedTriggeredAbility(effect, false));
     }
 
     public RabidElephant(final RabidElephant card) {

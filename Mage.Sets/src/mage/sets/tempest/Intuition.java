@@ -29,16 +29,15 @@ package mage.sets.tempest;
 
 import java.util.List;
 import java.util.UUID;
-
-import mage.constants.CardType;
-import mage.constants.Outcome;
-import mage.constants.Rarity;
 import mage.abilities.Ability;
 import mage.abilities.effects.SearchEffect;
 import mage.cards.Card;
 import mage.cards.CardImpl;
 import mage.cards.Cards;
 import mage.cards.CardsImpl;
+import mage.constants.CardType;
+import mage.constants.Outcome;
+import mage.constants.Rarity;
 import mage.constants.Zone;
 import mage.filter.FilterCard;
 import mage.game.Game;
@@ -111,7 +110,7 @@ class IntuitionEffect extends SearchEffect {
                 }
                 controller.revealCards("Reveal", cards, game);
                 
-                TargetCard targetCard = new TargetCard(Zone.PICK, new FilterCard());
+                TargetCard targetCard = new TargetCard(Zone.LIBRARY, new FilterCard());
                 
                 while(!opponent.choose(Outcome.Neutral, cards, targetCard, game)) {
                     if (!opponent.canRespond()) {
@@ -125,11 +124,11 @@ class IntuitionEffect extends SearchEffect {
                 }
                 controller.moveCards(cards, Zone.LIBRARY, Zone.GRAVEYARD, source, game);                
             }
-            controller.shuffleLibrary(game);
+            controller.shuffleLibrary(source, game);
             return true;
         }
         
-        controller.shuffleLibrary(game);
+        controller.shuffleLibrary(source, game);
         return false;
     }
 

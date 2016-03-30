@@ -29,21 +29,21 @@ package mage.sets.darkascension;
 
 import java.util.ArrayList;
 import java.util.UUID;
-import mage.constants.CardType;
-import mage.constants.Outcome;
-import mage.constants.Rarity;
-import mage.constants.Zone;
 import mage.MageObject;
 import mage.abilities.Ability;
 import mage.abilities.common.OnEventTriggeredAbility;
 import mage.abilities.effects.OneShotEffect;
 import mage.abilities.effects.common.AttachEffect;
+import mage.abilities.keyword.ChangelingAbility;
 import mage.abilities.keyword.EnchantAbility;
 import mage.cards.Card;
 import mage.cards.CardImpl;
 import mage.cards.Cards;
 import mage.cards.CardsImpl;
-import mage.filter.FilterCard;
+import mage.constants.CardType;
+import mage.constants.Outcome;
+import mage.constants.Rarity;
+import mage.constants.Zone;
 import mage.filter.common.FilterCreatureCard;
 import mage.filter.predicate.Predicate;
 import mage.filter.predicate.Predicates;
@@ -66,7 +66,6 @@ public class CallToTheKindred extends CardImpl {
         super(ownerId, 30, "Call to the Kindred", Rarity.RARE, new CardType[]{CardType.ENCHANTMENT}, "{3}{U}");
         this.expansionSetCode = "DKA";
         this.subtype.add("Aura");
-
 
         // Enchant creature
         TargetPermanent auraTarget = new TargetCreaturePermanent();
@@ -107,10 +106,10 @@ class CallToTheKindredEffect extends OneShotEffect {
 
     @Override
     public boolean apply(Game game, Ability source) {
-        Player player = game.getPlayer(source.getControllerId());
+        Player controller = game.getPlayer(source.getControllerId());
         Permanent enchantment = game.getPermanent(source.getSourceId());
 
-        if (player == null || enchantment.getAttachedTo() == null) {
+        if (enchantment == null || controller == null || enchantment.getAttachedTo() == null) {
             return false;
         }
 
@@ -119,55 +118,38 @@ class CallToTheKindredEffect extends OneShotEffect {
             return false;
         }
 
-        Cards cards = new CardsImpl(Zone.PICK);
-        int count = Math.min(player.getLibrary().size(), 5);
-        for (int i = 0; i < count; i++) {
-            Card card = player.getLibrary().removeFromTop(game);
-            if (card != null) {
-                cards.add(card);
-                game.setZone(card.getId(), Zone.PICK);
-            }
-        }
-        player.lookAtCards("Call to the Kindred", cards, game);
+        Cards cards = new CardsImpl();
+        cards.addAll(controller.getLibrary().getTopCards(game, 5));
+        controller.lookAtCards(enchantment.getIdName(), cards, game);
 
         FilterCreatureCard filter = new FilterCreatureCard();
-        StringBuilder sb = new StringBuilder("creature card with at least one subtype from: ");
-        ArrayList<Predicate<MageObject>> subtypes = new ArrayList<Predicate<MageObject>>();
-        for (String subtype : creature.getSubtype()) {
-            subtypes.add(new SubtypePredicate(subtype));
-            sb.append(subtype).append(", ");
+
+        if (!creature.getAbilities().contains(ChangelingAbility.getInstance())) {
+            StringBuilder sb = new StringBuilder("creature card with at least one subtype from: ");
+            ArrayList<Predicate<MageObject>> subtypes = new ArrayList<>();
+            for (String subtype : creature.getSubtype()) {
+                subtypes.add(new SubtypePredicate(subtype));
+                sb.append(subtype).append(", ");
+            }
+            filter.add(Predicates.or(subtypes));
+            sb.delete(sb.length() - 2, sb.length());
+            filter.setMessage(sb.toString());
+        } else {
+            filter.setMessage("creature card that shares a creature type with enchanted creature");
         }
-        filter.add(Predicates.or(subtypes));
-        sb.delete(sb.length() - 2, sb.length());
-        filter.setMessage(sb.toString());
 
-        if (cards.count(filter, game) > 0 && player.chooseUse(Outcome.DrawCard, "Do you wish to put a creature card onto the battlefield?", source, game)) {
-            TargetCard target = new TargetCard(Zone.PICK, filter);
+        if (cards.count(filter, game) > 0 && controller.chooseUse(Outcome.DrawCard, "Do you wish to put a creature card onto the battlefield?", source, game)) {
+            TargetCard target = new TargetCard(Zone.LIBRARY, filter);
 
-            if (player.choose(Outcome.PutCreatureInPlay, cards, target, game)) {
+            if (controller.choose(Outcome.PutCreatureInPlay, cards, target, game)) {
                 Card card = cards.get(target.getFirstTarget(), game);
                 if (card != null) {
                     cards.remove(card);
-                    card.putOntoBattlefield(game, Zone.PICK, source.getSourceId(), source.getControllerId());
+                    controller.moveCards(card, Zone.BATTLEFIELD, source, game);
                 }
             }
         }
-
-        TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put on the bottom of your library"));
-        while (player.canRespond() && cards.size() > 1) {
-            player.choose(Outcome.Neutral, cards, target, game);
-            Card card = cards.get(target.getFirstTarget(), game);
-            if (card != null) {
-                cards.remove(card);
-                card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, false);
-            }
-            target.clearChosen();
-        }
-        if (cards.size() == 1) {
-            Card card = cards.get(cards.iterator().next(), game);
-            card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, false);
-        }
-
+        controller.putCardsOnBottomOfLibrary(cards, game, source, true);
         return true;
     }
 }

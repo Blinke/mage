@@ -92,8 +92,12 @@ public class CopyEffect extends ContinuousEffectImpl {
             permanent = game.getPermanentEntering(copyToObjectId);
             if (permanent != null) {
                 copyToPermanent(permanent, game, source);
-                // set reference to the permanent later on the battlefield so we have to add already one to the zone change counter
-                affectedObjectList.add(new MageObjectReference(permanent.getId(), game.getState().getZoneChangeCounter(copyToObjectId) + 1, game));
+                // set reference to the permanent later on the battlefield so we have to add already one (if no token) to the zone change counter
+                int ZCCDiff = 1;
+                if (permanent instanceof PermanentToken) {
+                    ZCCDiff = 0;
+                }
+                affectedObjectList.add(new MageObjectReference(permanent.getId(), game.getState().getZoneChangeCounter(copyToObjectId) + ZCCDiff, game));
             }
         }
     }
@@ -132,8 +136,14 @@ public class CopyEffect extends ContinuousEffectImpl {
         }
 
         permanent.removeAllAbilities(source.getSourceId(), game);
-        for (Ability ability : copyFromObject.getAbilities()) {
-            permanent.addAbility(ability, getSourceId(), game, false); // no new Id so consumed replacement effects are known while new continuousEffects.apply happen.
+        if (copyFromObject instanceof Permanent) {
+            for (Ability ability : ((Permanent) copyFromObject).getAbilities(game)) {
+                permanent.addAbility(ability, getSourceId(), game, false); // no new Id so consumed replacement effects are known while new continuousEffects.apply happen.
+            }
+        } else {
+            for (Ability ability : copyFromObject.getAbilities()) {
+                permanent.addAbility(ability, getSourceId(), game, false); // no new Id so consumed replacement effects are known while new continuousEffects.apply happen.
+            }
         }
         permanent.getPower().setValue(copyFromObject.getPower().getValue());
         permanent.getToughness().setValue(copyFromObject.getToughness().getValue());

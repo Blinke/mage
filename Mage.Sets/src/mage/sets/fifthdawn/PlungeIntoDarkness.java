@@ -148,20 +148,19 @@ class PlungeIntoDarknessSearchEffect extends OneShotEffect {
         if (player != null) {
             VariableCost cost = new PayVariableLifeCost();
             int xValue = cost.announceXValue(source, game);
-            cost.getFixedCostsFromAnnouncedValue(xValue).pay(source, game, source.getSourceId(), source.getControllerId(), false);
+            cost.getFixedCostsFromAnnouncedValue(xValue).pay(source, game, source.getSourceId(), source.getControllerId(), false, null);
             
-            Cards cards = new CardsImpl(Zone.PICK);
+            Cards cards = new CardsImpl();
             int count = Math.min(player.getLibrary().size(), xValue);
             for (int i = 0; i < count; i++) {
                 Card card = player.getLibrary().removeFromTop(game);
                 if (card != null) {
                     cards.add(card);
-                    game.setZone(card.getId(), Zone.PICK);
                 }
             }
             player.lookAtCards("Plunge into Darkness", cards, game);
 
-            TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put into your hand"));
+            TargetCard target = new TargetCard(Zone.LIBRARY, new FilterCard("card to put into your hand"));
             if (player.choose(Outcome.DrawCard, cards, target, game)) {
                 Card card = cards.get(target.getFirstTarget(), game);
                 if (card != null) {

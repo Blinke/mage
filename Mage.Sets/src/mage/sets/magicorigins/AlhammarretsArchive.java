@@ -35,6 +35,7 @@ import mage.cards.CardImpl;
 import mage.constants.CardType;
 import mage.constants.Duration;
 import mage.constants.Outcome;
+import mage.constants.PhaseStep;
 import mage.constants.Rarity;
 import mage.constants.Zone;
 import mage.game.Game;
@@ -46,7 +47,6 @@ import mage.watchers.common.CardsDrawnDuringDrawStepWatcher;
  *
  * @author fireshoes
  */
-
 public class AlhammarretsArchive extends CardImpl {
 
     public AlhammarretsArchive(UUID ownerId) {
@@ -56,7 +56,7 @@ public class AlhammarretsArchive extends CardImpl {
 
         // If you would gain life, you gain twice that much life instead.
         this.addAbility(new SimpleStaticAbility(Zone.BATTLEFIELD, new AlhammarretsArchiveEffect()));
-        
+
         // If you draw a card except the first one you draw in each of your draw steps, draw two cards instead.
         this.addAbility(new SimpleStaticAbility(Zone.BATTLEFIELD, new AlhammarretsArchiveReplacementEffect()), new CardsDrawnDuringDrawStepWatcher());
     }
@@ -85,11 +85,6 @@ class AlhammarretsArchiveEffect extends ReplacementEffectImpl {
     @Override
     public AlhammarretsArchiveEffect copy() {
         return new AlhammarretsArchiveEffect(this);
-    }
-
-    @Override
-    public boolean apply(Game game, Ability source) {
-        return true;
     }
 
     @Override
@@ -132,22 +127,23 @@ class AlhammarretsArchiveReplacementEffect extends ReplacementEffectImpl {
 
     @Override
     public boolean replaceEvent(GameEvent event, Ability source, Game game) {
-        Player player = game.getPlayer(source.getControllerId());
-        if (player != null) {
-            player.drawCards(2, game, event.getAppliedEffects());
+        Player controller = game.getPlayer(source.getControllerId());
+        if (controller != null) {
+            controller.drawCards(2, game, event.getAppliedEffects());
         }
         return true;
     }
-    
+
     @Override
     public boolean checksEventType(GameEvent event, Game game) {
         return event.getType() == GameEvent.EventType.DRAW_CARD;
-    }   
+    }
 
     @Override
     public boolean applies(GameEvent event, Ability source, Game game) {
         if (event.getPlayerId().equals(source.getControllerId())) {
-            if (game.getActivePlayerId().equals(event.getPlayerId())) {
+            if (game.getActivePlayerId().equals(event.getPlayerId())
+                    && game.getPhase().getStep().getType().equals(PhaseStep.DRAW)) {
                 CardsDrawnDuringDrawStepWatcher watcher = (CardsDrawnDuringDrawStepWatcher) game.getState().getWatchers().get("CardsDrawnDuringDrawStep");
                 if (watcher != null && watcher.getAmountCardsDrawn(event.getPlayerId()) > 0) {
                     return true;

@@ -111,7 +111,7 @@ class WaveOfVitriolEffect extends OneShotEffect {
         Player controller = game.getPlayer(source.getControllerId());
         if (controller != null) {
             Map<Player, Integer> sacrificedLands = new HashMap<>();
-            for (UUID playerId : controller.getInRange()) {
+            for (UUID playerId : game.getState().getPlayersInRange(controller.getId(), game)) {
                 Player player = game.getPlayer(playerId);
                 if (player != null) {
                     int count = 0;
@@ -138,7 +138,7 @@ class WaveOfVitriolEffect extends OneShotEffect {
             }
             controller.moveCards(toBattlefield.getCards(game), Zone.BATTLEFIELD, source, game, true, false, true, null);
             for (Player player : playersToShuffle) {
-                player.shuffleLibrary(game);
+                player.shuffleLibrary(source, game);
             }
 
             return true;

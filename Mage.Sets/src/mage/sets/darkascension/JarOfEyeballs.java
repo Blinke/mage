@@ -145,7 +145,7 @@ class JarOfEyeballsCost extends CostImpl {
     }
 
     @Override
-    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana) {
+    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana, Cost costToPay) {
         Permanent permanent = game.getPermanent(ability.getSourceId());
         if (permanent != null) {
             this.removedCounters = permanent.getCounters().getCount(CounterType.EYEBALL);
@@ -197,18 +197,17 @@ class JarOfEyeballsEffect extends OneShotEffect {
             return false;
         }
 
-        Cards cards = new CardsImpl(Zone.PICK);
+        Cards cards = new CardsImpl();
         int count = Math.min(player.getLibrary().size(), countersRemoved);
         for (int i = 0; i < count; i++) {
             Card card = player.getLibrary().removeFromTop(game);
             if (card != null) {
                 cards.add(card);
-                game.setZone(card.getId(), Zone.PICK);
             }
         }
         player.lookAtCards("Jar of Eyeballs", cards, game);
 
-        TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put into your hand"));
+        TargetCard target = new TargetCard(Zone.LIBRARY, new FilterCard("card to put into your hand"));
         if (player.choose(Outcome.DrawCard, cards, target, game)) {
             Card card = cards.get(target.getFirstTarget(), game);
             if (card != null) {
@@ -216,22 +215,7 @@ class JarOfEyeballsEffect extends OneShotEffect {
                 card.moveToZone(Zone.HAND, source.getSourceId(), game, false);
             }
         }
-
-        target = new TargetCard(Zone.PICK, new FilterCard("card to put on the bottom of your library"));
-        while (cards.size() > 1) {
-            player.choose(Outcome.Neutral, cards, target, game);
-            Card card = cards.get(target.getFirstTarget(), game);
-            if (card != null) {
-                cards.remove(card);
-                card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, false);
-            }
-            target.clearChosen();
-        }
-        if (cards.size() == 1) {
-            Card card = cards.get(cards.iterator().next(), game);
-            card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, false);
-        }
-
+        player.putCardsOnBottomOfLibrary(cards, game, source, true);
         return true;
     }
 }

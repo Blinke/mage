@@ -99,13 +99,12 @@ class OrcishLibrarianEffect extends OneShotEffect {
         Player player = game.getPlayer(source.getControllerId());
 
         if (player != null) {
-            Cards cards = new CardsImpl(Zone.PICK);
+            Cards cards = new CardsImpl();
             int cardsCount = Math.min(8, player.getLibrary().size());
             for (int i = 0; i < cardsCount; i++) {
                 Card card = player.getLibrary().removeFromTop(game);
                 if (card != null) {
                     cards.add(card);
-                    game.setZone(card.getId(), Zone.PICK);
                 }
             }
 
@@ -120,7 +119,7 @@ class OrcishLibrarianEffect extends OneShotEffect {
                     }
                 }
                 player.lookAtCards("OrcishLibrarian", cards, game);
-                TargetCard target = new TargetCard (Zone.PICK, new FilterCard("card to put on the top of target player's library"));
+                TargetCard target = new TargetCard (Zone.LIBRARY, new FilterCard("card to put on the top of target player's library"));
                 while (player.canRespond() && cards.size() > 0) {
                     player.choose(Outcome.Neutral, cards, target, game);
                     Card card = cards.get(target.getFirstTarget(), game);

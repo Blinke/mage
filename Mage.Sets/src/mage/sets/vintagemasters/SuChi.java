@@ -39,7 +39,7 @@ import mage.constants.Rarity;
 /**
  *
  * @author LoneFox
-
+ *
  */
 public class SuChi extends CardImpl {
 
@@ -50,8 +50,8 @@ public class SuChi extends CardImpl {
         this.power = new MageInt(4);
         this.toughness = new MageInt(4);
 
-        // When Su-Chi dies, add {4} to your mana pool.
-        this.addAbility(new DiesTriggeredAbility(new BasicManaEffect(new Mana(0, 0, 0, 0, 0, 4, 0)), false));
+        // When Su-Chi dies, add {C}{C}{C}{C} to your mana pool.
+        this.addAbility(new DiesTriggeredAbility(new BasicManaEffect(new Mana(0, 0, 0, 0, 0, 0, 0, 4)), false));
     }
 
     public SuChi(final SuChi card) {

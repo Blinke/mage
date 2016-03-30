@@ -40,7 +40,6 @@ import mage.abilities.MageSingleton;
 import mage.abilities.Mode;
 import mage.abilities.Modes;
 import mage.abilities.StateTriggeredAbility;
-import mage.abilities.costs.AlternativeCost;
 import mage.abilities.costs.Cost;
 import mage.abilities.costs.Costs;
 import mage.abilities.costs.CostsImpl;
@@ -57,6 +56,7 @@ import mage.constants.AbilityWord;
 import mage.constants.CardType;
 import mage.constants.EffectType;
 import mage.constants.Zone;
+import mage.constants.ZoneDetail;
 import mage.game.Game;
 import mage.game.events.GameEvent;
 import mage.players.Player;
@@ -103,7 +103,7 @@ public class StackAbility extends StackObjImpl implements Ability {
 
     @Override
     public boolean resolve(Game game) {
-        if (ability.getTargets().stillLegal(ability, game)) {
+        if (ability.getTargets().stillLegal(ability, game) || !canFizzle()) {
             boolean result = ability.resolve(game);
             game.getStack().remove(this);
             return result;
@@ -123,11 +123,11 @@ public class StackAbility extends StackObjImpl implements Ability {
     @Override
     public void counter(UUID sourceId, Game game) {
         // zone, owner, top ignored
-        this.counter(sourceId, game, Zone.GRAVEYARD, true, true);
+        this.counter(sourceId, game, Zone.GRAVEYARD, true, ZoneDetail.TOP);
     }
 
     @Override
-    public void counter(UUID sourceId, Game game, Zone zone, boolean owner, boolean top) {
+    public void counter(UUID sourceId, Game game, Zone zone, boolean owner, ZoneDetail zoneDetail) {
         //20100716 - 603.8
         if (ability instanceof StateTriggeredAbility) {
             ((StateTriggeredAbility) ability).counter(game);
@@ -314,15 +314,6 @@ public class StackAbility extends StackObjImpl implements Ability {
 
     @Override
     public void addChoice(Choice choice) {
-    }
-
-    @Override
-    public List<AlternativeCost> getAlternativeCosts() {
-        return ability.getAlternativeCosts();
-    }
-
-    @Override
-    public void addAlternativeCost(AlternativeCost cost) {
     }
 
     @Override
@@ -552,7 +543,7 @@ public class StackAbility extends StackObjImpl implements Ability {
 
     @Override
     public int getSourceObjectZoneChangeCounter() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("Not supported.");
     }
 
     @Override
@@ -562,7 +553,7 @@ public class StackAbility extends StackObjImpl implements Ability {
 
     @Override
     public int getZoneChangeCounter(Game game) {
-        throw new UnsupportedOperationException("Not supported.");
+        return game.getState().getZoneChangeCounter(getSourceId());
     }
 
     @Override
@@ -580,4 +571,13 @@ public class StackAbility extends StackObjImpl implements Ability {
         return getAbilities().get(0).getTargetDescription(targets, game);
     }
 
+    @Override
+    public boolean canFizzle() {
+        return ability.canFizzle();
+    }
+
+    @Override
+    public void setCanFizzle(boolean canFizzle) {
+        throw new UnsupportedOperationException("Not supported.");
+    }
 }

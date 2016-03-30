@@ -178,4 +178,71 @@ public class FlashbackTest extends CardTestPlayerBase {
         assertExileCount("Conflagrate", 1);
 
     }
+
+    /**
+     * Ancestral Vision has no casting cost (this is different to a casting cost
+     * of {0}). Snapcaster Mage, for example, is able to give it flashback
+     * whilst it is in the graveyard.
+     *
+     * However the controller should not be able to cast Ancestral Visions from
+     * the graveyard for {0} mana.
+     */
+    @Test
+    public void testFlashbackAncestralVision() {
+        // Suspend 4-{U}
+        // Target player draws three cards.
+        addCard(Zone.GRAVEYARD, playerA, "Ancestral Vision", 1);
+
+        // Flash
+        // When Snapcaster Mage enters the battlefield, target instant or sorcery card in your graveyard gains flashback until end of turn. The flashback cost is equal to its mana cost.
+        addCard(Zone.HAND, playerA, "Snapcaster Mage", 1);
+
+        addCard(Zone.BATTLEFIELD, playerA, "Island", 2);
+
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Snapcaster Mage");
+        addTarget(playerA, "Ancestral Vision");
+
+        activateAbility(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Flashback");
+        addTarget(playerA, playerA);
+
+        setStopAt(1, PhaseStep.BEGIN_COMBAT);
+        execute();
+
+        assertHandCount(playerA, "Snapcaster Mage", 0);
+        assertPermanentCount(playerA, "Snapcaster Mage", 1);
+        assertGraveyardCount(playerA, "Ancestral Vision", 1);
+        assertHandCount(playerA, 0);
+
+    }
+
+    /**
+     * I cast Runic Repetition targeting a Silent Departure in exile, and
+     * afterwards I cast the Silent Departure from my hand. When it resolves, it
+     * goes back to exile instead of ending up in my graveyard. Looks like a
+     * problem with Runic Repetition?
+     */
+    @Test
+    public void testFlashbackReturnToHandAndCastAgain() {
+        addCard(Zone.BATTLEFIELD, playerA, "Silvercoat Lion", 2);
+
+        addCard(Zone.BATTLEFIELD, playerA, "Island", 9);
+        // Return target creature to its owner's hand.
+        // Flashback {4}{U}
+        addCard(Zone.GRAVEYARD, playerA, "Silent Departure", 1); // {U}
+        addCard(Zone.HAND, playerA, "Runic Repetition", 1);// {2}{U}
+
+        activateAbility(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Flashback");
+        addTarget(playerA, "Silvercoat Lion");
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Runic Repetition");
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Silent Departure", "Silvercoat Lion");
+
+        setStopAt(1, PhaseStep.BEGIN_COMBAT);
+        execute();
+
+        assertHandCount(playerA, "Silvercoat Lion", 2);
+        assertExileCount("Silent Departure", 0);
+        assertGraveyardCount(playerA, "Silent Departure", 1);
+        assertGraveyardCount(playerA, "Runic Repetition", 1);
+
+    }
 }

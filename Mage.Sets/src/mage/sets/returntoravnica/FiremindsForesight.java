@@ -27,7 +27,6 @@
  */
 package mage.sets.returntoravnica;
 
-import java.util.List;
 import java.util.UUID;
 
 import mage.constants.CardType;
@@ -100,7 +99,7 @@ class FiremindsForesightSearchEffect extends  OneShotEffect {
         }
         int cardsCount;
         Cards cardToReveal = new CardsImpl();
-        Cards cardsInLibrary = new CardsImpl(Zone.LIBRARY);
+        Cards cardsInLibrary = new CardsImpl();
         cardsInLibrary.addAll(player.getLibrary().getCards(game));
 
         for (int cmc=3; cmc > 0; cmc--) {
@@ -129,7 +128,7 @@ class FiremindsForesightSearchEffect extends  OneShotEffect {
             }
         }
 
-        player.shuffleLibrary(game);
+        player.shuffleLibrary(source, game);
         return true;
     }
 }

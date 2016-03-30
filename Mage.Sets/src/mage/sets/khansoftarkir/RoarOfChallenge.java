@@ -34,7 +34,6 @@ import mage.abilities.decorator.ConditionalContinuousEffect;
 import mage.abilities.effects.common.combat.MustBeBlockedByAllTargetEffect;
 import mage.abilities.effects.common.continuous.GainAbilityTargetEffect;
 import mage.abilities.keyword.IndestructibleAbility;
-import mage.abilities.keyword.TrampleAbility;
 import mage.cards.CardImpl;
 import mage.constants.CardType;
 import mage.constants.Duration;

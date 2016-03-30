@@ -27,10 +27,15 @@
  */
 package mage.abilities.costs.common;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import mage.abilities.Ability;
+import mage.abilities.costs.Cost;
 import mage.abilities.costs.CostImpl;
+import mage.cards.Card;
 import mage.constants.Outcome;
+import mage.constants.Zone;
 import mage.game.Game;
 import mage.game.permanent.Permanent;
 import mage.players.Player;
@@ -57,17 +62,20 @@ public class ReturnToHandChosenControlledPermanentCost extends CostImpl {
     }
 
     @Override
-    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana) {
+    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana, Cost costToPay) {
         Player controller = game.getPlayer(controllerId);
         if (controller != null) {
             if (targets.choose(Outcome.ReturnToHand, controllerId, sourceId, game)) {
+                Set<Card> permanentsToReturn = new HashSet<>();
                 for (UUID targetId : targets.get(0).getTargets()) {
                     Permanent permanent = game.getPermanent(targetId);
                     if (permanent == null) {
                         return false;
                     }
-                    paid |= controller.moveCardToHandWithInfo(permanent, sourceId, game);
+                    permanentsToReturn.add((Card) permanent);
                 }
+                controller.moveCards(permanentsToReturn, Zone.HAND, ability, game);
+                paid = true;
             }
         }
         return paid;

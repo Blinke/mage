@@ -26,7 +26,7 @@
  * or implied, of BetaSteward_at_googlemail.com.
  */
 
-/*
+ /*
  * TablesPanel.java
  *
  * Created on 15-Dec-2009, 10:54:01 PM
@@ -35,7 +35,10 @@ package mage.client.table;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.HeadlessException;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
@@ -79,11 +82,13 @@ import static mage.client.dialog.PreferencesDialog.KEY_TABLES_COLUMNS_ORDER;
 import static mage.client.dialog.PreferencesDialog.KEY_TABLES_COLUMNS_WIDTH;
 import mage.client.dialog.TableWaitingDialog;
 import mage.client.util.ButtonColumn;
+import mage.client.util.GUISizeHelper;
 import mage.client.util.MageTableRowSorter;
 import mage.client.util.gui.GuiDisplayUtil;
 import mage.client.util.gui.TableUtil;
 import mage.constants.MatchTimeLimit;
 import mage.constants.MultiplayerAttackOption;
+import mage.constants.PlayerAction;
 import mage.constants.RangeOfInfluence;
 import mage.constants.SkillLevel;
 import mage.game.match.MatchOptions;
@@ -92,6 +97,7 @@ import mage.remote.Session;
 import mage.view.MatchView;
 import mage.view.RoomUsersView;
 import mage.view.TableView;
+import mage.view.UserRequestMessage;
 import org.apache.log4j.Logger;
 
 /**
@@ -100,7 +106,8 @@ import org.apache.log4j.Logger;
  */
 public class TablesPanel extends javax.swing.JPanel {
 
-    private static final Logger logger = Logger.getLogger(TablesPanel.class);
+    private static final Logger LOGGER = Logger.getLogger(TablesPanel.class);
+    private static final int[] DEFAULT_COLUMNS_WIDTH = {35, 150, 120, 180, 80, 120, 80, 60, 40, 60};
 
     private TableTableModel tableModel;
     private MatchesTableModel matchesModel;
@@ -117,9 +124,10 @@ public class TablesPanel extends javax.swing.JPanel {
     private int currentMessage;
     private MageTableRowSorter activeTablesSorter;
 
-    JToggleButton[] filterButtons;
+    private final ButtonColumn actionButton1;
+    private final ButtonColumn actionButton2;
 
-    private static final int[] defaultColumnsWidth = {35, 150, 120, 180, 80, 120, 80, 60, 60};
+    JToggleButton[] filterButtons;
 
     /**
      * Creates new form TablesPanel
@@ -138,7 +146,7 @@ public class TablesPanel extends javax.swing.JPanel {
         activeTablesSorter = new MageTableRowSorter(tableModel);
         tableTables.setRowSorter(activeTablesSorter);
 
-        TableUtil.setColumnWidthAndOrder(tableTables, defaultColumnsWidth,
+        TableUtil.setColumnWidthAndOrder(tableTables, DEFAULT_COLUMNS_WIDTH,
                 PreferencesDialog.KEY_TABLES_COLUMNS_WIDTH, PreferencesDialog.KEY_TABLES_COLUMNS_ORDER);
 
         tableCompleted.setRowSorter(new MageTableRowSorter(matchesModel));
@@ -152,15 +160,17 @@ public class TablesPanel extends javax.swing.JPanel {
             btnFormatBlock, btnFormatStandard, btnFormatModern, btnFormatLegacy, btnFormatVintage, btnFormatCommander, btnFormatTinyLeader, btnFormatLimited, btnFormatOther,
             btnSkillBeginner, btnSkillCasual, btnSkillSerious};
 
-        JComponent[] components = new JComponent[]{chatPanelMain, jSplitPane1, jScrollPane1, jScrollPane2, topPanel, jPanel3};
+        JComponent[] components = new JComponent[]{chatPanelMain, jSplitPane1, jScrollPaneTablesActive, jScrollPaneTablesFinished, jPanelTop, jPanelTables};
         for (JComponent component : components) {
             component.setOpaque(false);
         }
 
-        jScrollPane1.getViewport().setBackground(new Color(255, 255, 255, 50));
-        jScrollPane2.getViewport().setBackground(new Color(255, 255, 255, 50));
+        jScrollPaneTablesActive.getViewport().setBackground(new Color(255, 255, 255, 50));
+        jScrollPaneTablesFinished.getViewport().setBackground(new Color(255, 255, 255, 50));
 
         restoreSettings();
+
+        setGUISize();
 
         Action openTableAction;
         openTableAction = new AbstractAction() {
@@ -187,18 +197,18 @@ public class TablesPanel extends javax.swing.JPanel {
                                         try {
                                             frame.setSelected(true);
                                         } catch (PropertyVetoException ve) {
-                                            logger.error(ve);
+                                            LOGGER.error(ve);
                                         }
                                     }
 
                                 }
                             } catch (InterruptedException ex) {
-                                logger.error(ex);
+                                LOGGER.error(ex);
                             }
                             return;
                         }
                         if (isTournament) {
-                            logger.info("Joining tournament " + tableId);
+                            LOGGER.info("Joining tournament " + tableId);
                             if (deckType.startsWith("Limited")) {
                                 if (!status.endsWith("PW")) {
                                     session.joinTournamentTable(roomId, tableId, session.getUserName(), "Human", 1, null, "");
@@ -209,29 +219,30 @@ public class TablesPanel extends javax.swing.JPanel {
                                 joinTableDialog.showDialog(roomId, tableId, true, deckType.startsWith("Limited"));
                             }
                         } else {
-                            logger.info("Joining table " + tableId);
+                            LOGGER.info("Joining table " + tableId);
                             joinTableDialog.showDialog(roomId, tableId, false, false);
                         }
                         break;
                     case "Remove":
-                        if (JOptionPane.showConfirmDialog(null, "Are you sure you want to remove table?", "Removing table", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-                            session.removeTable(roomId, tableId);
-                        }
+                        UserRequestMessage message = new UserRequestMessage("Removing table", "Are you sure you want to remove table?");
+                        message.setButton1("No", null);
+                        message.setButton2("Yes", PlayerAction.CLIENT_REMOVE_TABLE);
+                        MageFrame.getInstance().showUserRequestDialog(message);
                         break;
                     case "Show":
                         if (isTournament) {
-                            logger.info("Showing tournament table " + tableId);
+                            LOGGER.info("Showing tournament table " + tableId);
                             session.watchTable(roomId, tableId);
                         }
                         break;
                     case "Watch":
                         if (!isTournament) {
-                            logger.info("Watching table " + tableId);
+                            LOGGER.info("Watching table " + tableId);
                             session.watchTable(roomId, tableId);
                         }
                         break;
                     case "Replay":
-                        logger.info("Replaying game " + gameId);
+                        LOGGER.info("Replaying game " + gameId);
                         session.replayGame(gameId);
                         break;
                 }
@@ -258,7 +269,7 @@ public class TablesPanel extends javax.swing.JPanel {
                         break;
                     case "Show":;
                         if (matchesModel.isTournament(modelRow)) {
-                            logger.info("Showing tournament table " + matchesModel.getTableId(modelRow));
+                            LOGGER.info("Showing tournament table " + matchesModel.getTableId(modelRow));
                             session.watchTable(roomId, matchesModel.getTableId(modelRow));
                         }
                         break;
@@ -267,8 +278,8 @@ public class TablesPanel extends javax.swing.JPanel {
         };
 
         // !!!! adds action buttons to the table panel (don't delete this)
-        new ButtonColumn(tableTables, openTableAction, tableTables.convertColumnIndexToView(TableTableModel.ACTION_COLUMN));
-        new ButtonColumn(tableCompleted, closedTableAction, tableCompleted.convertColumnIndexToView(MatchesTableModel.ACTION_COLUMN));
+        actionButton1 = new ButtonColumn(tableTables, openTableAction, tableTables.convertColumnIndexToView(TableTableModel.ACTION_COLUMN));
+        actionButton2 = new ButtonColumn(tableCompleted, closedTableAction, tableCompleted.convertColumnIndexToView(MatchesTableModel.ACTION_COLUMN));
         // !!!!
     }
 
@@ -277,13 +288,71 @@ public class TablesPanel extends javax.swing.JPanel {
         chatPanelMain.cleanUp();
     }
 
+    public void changeGUISize() {
+        chatPanelMain.changeGUISize();
+        actionButton1.changeGUISize();
+        actionButton2.changeGUISize();
+        setGUISize();
+    }
+
+    private void setGUISize() {
+        tableTables.getTableHeader().setFont(GUISizeHelper.tableFont);
+        tableTables.setFont(GUISizeHelper.tableFont);
+        tableTables.setRowHeight(GUISizeHelper.getTableRowHeight());
+
+        tableCompleted.getTableHeader().setFont(GUISizeHelper.tableFont);
+        tableCompleted.setFont(GUISizeHelper.tableFont);
+        tableCompleted.setRowHeight(GUISizeHelper.getTableRowHeight());
+
+        jSplitPane1.setDividerSize(GUISizeHelper.dividerBarSize);
+        jSplitPaneTables.setDividerSize(GUISizeHelper.dividerBarSize);
+        jScrollPaneTablesActive.getVerticalScrollBar().setPreferredSize(new Dimension(GUISizeHelper.scrollBarSize, 0));
+        jScrollPaneTablesActive.getHorizontalScrollBar().setPreferredSize(new Dimension(0, GUISizeHelper.scrollBarSize));
+
+        ImageIcon icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/state_waiting.png"));
+        Image img = icon.getImage();
+        Image newimg = img.getScaledInstance(GUISizeHelper.menuFont.getSize(), GUISizeHelper.menuFont.getSize(), java.awt.Image.SCALE_SMOOTH);
+        btnStateWaiting.setIcon(new ImageIcon(newimg));
+
+        icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/state_active.png"));
+        img = icon.getImage();
+        newimg = img.getScaledInstance(GUISizeHelper.menuFont.getSize(), GUISizeHelper.menuFont.getSize(), java.awt.Image.SCALE_SMOOTH);
+        btnStateActive.setIcon(new ImageIcon(newimg));
+
+        icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/state_finished.png"));
+        img = icon.getImage();
+        newimg = img.getScaledInstance(GUISizeHelper.menuFont.getSize(), GUISizeHelper.menuFont.getSize(), java.awt.Image.SCALE_SMOOTH);
+        btnStateFinished.setIcon(new ImageIcon(newimg));
+
+        int iconSize = 48 + GUISizeHelper.menuFont.getSize() * 2 - 15;
+        icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/match_new.png"));
+        img = icon.getImage();
+        newimg = img.getScaledInstance(iconSize, iconSize, java.awt.Image.SCALE_SMOOTH);
+        btnNewTable.setIcon(new ImageIcon(newimg));
+
+        icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/tourney_new.png"));
+        img = icon.getImage();
+        newimg = img.getScaledInstance(iconSize, iconSize, java.awt.Image.SCALE_SMOOTH);
+        btnNewTournament.setIcon(new ImageIcon(newimg));
+
+        for (JToggleButton component : filterButtons) {
+            component.setFont(GUISizeHelper.menuFont);
+        }
+        Dimension newDimension = new Dimension((int) jPanelBottom.getPreferredSize().getWidth(), GUISizeHelper.menuFont.getSize() + 28);
+        jPanelBottom.setMinimumSize(newDimension);
+        jPanelBottom.setPreferredSize(newDimension);
+        jButtonFooterNext.setFont(GUISizeHelper.menuFont);
+        jLabelFooterLabel.setFont(new Font(GUISizeHelper.menuFont.getName(), Font.BOLD, GUISizeHelper.menuFont.getSize()));
+        jLabelFooterText.setFont(GUISizeHelper.menuFont);
+    }
+
     private void saveDividerLocations() {
         // save panel sizes and divider locations.
         Rectangle rec = MageFrame.getDesktop().getBounds();
         String sb = Double.toString(rec.getWidth()) + "x" + Double.toString(rec.getHeight());
         PreferencesDialog.saveValue(PreferencesDialog.KEY_MAGE_PANEL_LAST_SIZE, sb);
         PreferencesDialog.saveValue(PreferencesDialog.KEY_TABLES_DIVIDER_LOCATION_1, Integer.toString(this.jSplitPane1.getDividerLocation()));
-        PreferencesDialog.saveValue(PreferencesDialog.KEY_TABLES_DIVIDER_LOCATION_2, Integer.toString(this.jSplitPane2.getDividerLocation()));
+        PreferencesDialog.saveValue(PreferencesDialog.KEY_TABLES_DIVIDER_LOCATION_2, Integer.toString(this.jSplitPaneTables.getDividerLocation()));
         PreferencesDialog.saveValue(PreferencesDialog.KEY_TABLES_DIVIDER_LOCATION_3, Integer.toString(chatPanelMain.getSplitDividerLocation()));
     }
 
@@ -325,11 +394,11 @@ public class TablesPanel extends javax.swing.JPanel {
                     jSplitPane1.setDividerLocation(Integer.parseInt(location));
                 }
                 if (this.btnStateFinished.isSelected()) {
-                    this.jSplitPane2.setDividerLocation(-1);
+                    this.jSplitPaneTables.setDividerLocation(-1);
                 } else {
                     location = PreferencesDialog.getCachedValue(PreferencesDialog.KEY_TABLES_DIVIDER_LOCATION_2, null);
-                    if (location != null && jSplitPane2 != null) {
-                        jSplitPane2.setDividerLocation(Integer.parseInt(location));
+                    if (location != null && jSplitPaneTables != null) {
+                        jSplitPaneTables.setDividerLocation(Integer.parseInt(location));
                     }
                 }
                 location = PreferencesDialog.getCachedValue(PreferencesDialog.KEY_TABLES_DIVIDER_LOCATION_3, null);
@@ -343,9 +412,9 @@ public class TablesPanel extends javax.swing.JPanel {
     public Map<String, JComponent> getUIComponents() {
         Map<String, JComponent> components = new HashMap<>();
 
-        components.put("jScrollPane1", jScrollPane1);
-        components.put("jScrollPane1ViewPort", jScrollPane1.getViewport());
-        components.put("jPanel1", topPanel);
+        components.put("jScrollPane1", jScrollPaneTablesActive);
+        components.put("jScrollPane1ViewPort", jScrollPaneTablesActive.getViewport());
+        components.put("jPanel1", jPanelTop);
         components.put("tablesPanel", this);
 
         return components;
@@ -384,10 +453,8 @@ public class TablesPanel extends javax.swing.JPanel {
                     updateMatchesTask = new UpdateMatchesTask(session, roomId, this);
                     updateMatchesTask.execute();
                 }
-            } else {
-                if (updateMatchesTask != null) {
-                    updateMatchesTask.cancel(true);
-                }
+            } else if (updateMatchesTask != null) {
+                updateMatchesTask.cancel(true);
             }
         }
     }
@@ -457,11 +524,11 @@ public class TablesPanel extends javax.swing.JPanel {
             this.currentMessage = 0;
         }
         if (serverMessages == null || serverMessages.isEmpty()) {
-            this.jPanel2.setVisible(false);
+            this.jPanelBottom.setVisible(false);
         } else {
-            this.jPanel2.setVisible(true);
-            this.jLabel2.setText(serverMessages.get(0));
-            this.jButtonNext.setVisible(serverMessages.size() > 1);
+            this.jPanelBottom.setVisible(true);
+            this.jLabelFooterText.setText(serverMessages.get(0));
+            this.jButtonFooterNext.setVisible(serverMessages.size() > 1);
         }
     }
 
@@ -596,8 +663,9 @@ public class TablesPanel extends javax.swing.JPanel {
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
+        java.awt.GridBagConstraints gridBagConstraints;
 
-        topPanel = new javax.swing.JPanel();
+        jPanelTop = new javax.swing.JPanel();
         btnNewTable = new javax.swing.JButton();
         btnNewTournament = new javax.swing.JButton();
         filterBar1 = new javax.swing.JToolBar();
@@ -625,21 +693,23 @@ public class TablesPanel extends javax.swing.JPanel {
         btnFormatLimited = new javax.swing.JToggleButton();
         btnFormatOther = new javax.swing.JToggleButton();
         btnQuickStart = new javax.swing.JButton();
-        jPanel2 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel2 = new javax.swing.JLabel();
-        jButtonNext = new javax.swing.JButton();
         jSplitPane1 = new javax.swing.JSplitPane();
-        jPanel3 = new javax.swing.JPanel();
-        jSplitPane2 = new javax.swing.JSplitPane();
-        jScrollPane1 = new javax.swing.JScrollPane();
+        jPanelTables = new javax.swing.JPanel();
+        jSplitPaneTables = new javax.swing.JSplitPane();
+        jScrollPaneTablesActive = new javax.swing.JScrollPane();
         tableTables = new javax.swing.JTable();
-        jScrollPane2 = new javax.swing.JScrollPane();
+        jScrollPaneTablesFinished = new javax.swing.JScrollPane();
         tableCompleted = new javax.swing.JTable();
         chatPanelMain = new mage.client.table.PlayersChatPanel();
+        jPanelBottom = new javax.swing.JPanel();
+        jButtonFooterNext = new javax.swing.JButton();
+        jLabelFooterLabel = new javax.swing.JLabel();
+        jLabelFooterText = new javax.swing.JLabel();
 
-        topPanel.setBackground(java.awt.Color.white);
-        topPanel.setOpaque(false);
+        setLayout(new java.awt.GridBagLayout());
+
+        jPanelTop.setBackground(java.awt.Color.white);
+        jPanelTop.setOpaque(false);
 
         btnNewTable.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/match_new.png"))); // NOI18N
         btnNewTable.setToolTipText("Creates a new match table.");
@@ -664,16 +734,12 @@ public class TablesPanel extends javax.swing.JPanel {
         filterBar1.setFocusable(false);
         filterBar1.setOpaque(false);
 
-        btnStateWaiting.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/state_waiting.png"))); // NOI18N
         btnStateWaiting.setSelected(true);
         btnStateWaiting.setToolTipText("Shows all tables waiting for players.");
         btnStateWaiting.setActionCommand("stateWait");
         btnStateWaiting.setFocusPainted(false);
         btnStateWaiting.setFocusable(false);
         btnStateWaiting.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        btnStateWaiting.setMaximumSize(new java.awt.Dimension(27, 27));
-        btnStateWaiting.setMinimumSize(new java.awt.Dimension(27, 27));
-        btnStateWaiting.setPreferredSize(new java.awt.Dimension(23, 23));
         btnStateWaiting.setRequestFocusEnabled(false);
         btnStateWaiting.setVerifyInputWhenFocusTarget(false);
         btnStateWaiting.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
@@ -684,16 +750,12 @@ public class TablesPanel extends javax.swing.JPanel {
         });
         filterBar1.add(btnStateWaiting);
 
-        btnStateActive.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/state_active.png"))); // NOI18N
         btnStateActive.setSelected(true);
         btnStateActive.setToolTipText("Shows all tables with active matches.");
         btnStateActive.setActionCommand("stateActive");
         btnStateActive.setFocusPainted(false);
         btnStateActive.setFocusable(false);
         btnStateActive.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        btnStateActive.setMaximumSize(new java.awt.Dimension(27, 27));
-        btnStateActive.setMinimumSize(new java.awt.Dimension(27, 27));
-        btnStateActive.setPreferredSize(new java.awt.Dimension(23, 23));
         btnStateActive.setRequestFocusEnabled(false);
         btnStateActive.setVerifyInputWhenFocusTarget(false);
         btnStateActive.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
@@ -704,16 +766,12 @@ public class TablesPanel extends javax.swing.JPanel {
         });
         filterBar1.add(btnStateActive);
 
-        btnStateFinished.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/state_finished.png"))); // NOI18N
         btnStateFinished.setSelected(true);
         btnStateFinished.setToolTipText("<HTML>Toggles the visibility of the table of completed <br>matches and tournaments in the lower area.\n<br>Showing the last 50 finished matches.");
         btnStateFinished.setActionCommand("stateFinished");
         btnStateFinished.setFocusPainted(false);
         btnStateFinished.setFocusable(false);
         btnStateFinished.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        btnStateFinished.setMaximumSize(new java.awt.Dimension(27, 27));
-        btnStateFinished.setMinimumSize(new java.awt.Dimension(27, 27));
-        btnStateFinished.setPreferredSize(new java.awt.Dimension(23, 23));
         btnStateFinished.setRequestFocusEnabled(false);
         btnStateFinished.setVerifyInputWhenFocusTarget(false);
         btnStateFinished.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
@@ -979,139 +1037,123 @@ public class TablesPanel extends javax.swing.JPanel {
             }
         });
 
-        javax.swing.GroupLayout topPanelLayout = new javax.swing.GroupLayout(topPanel);
-        topPanel.setLayout(topPanelLayout);
-        topPanelLayout.setHorizontalGroup(
-            topPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(topPanelLayout.createSequentialGroup()
+        javax.swing.GroupLayout jPanelTopLayout = new javax.swing.GroupLayout(jPanelTop);
+        jPanelTop.setLayout(jPanelTopLayout);
+        jPanelTopLayout.setHorizontalGroup(
+            jPanelTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanelTopLayout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(btnNewTable)
                 .addGap(6, 6, 6)
                 .addComponent(btnNewTournament)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(topPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(filterBar1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(filterBar2, javax.swing.GroupLayout.DEFAULT_SIZE, 468, Short.MAX_VALUE))
+                .addGroup(jPanelTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(filterBar1, javax.swing.GroupLayout.DEFAULT_SIZE, 491, Short.MAX_VALUE)
+                    .addComponent(filterBar2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btnQuickStart)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(835, Short.MAX_VALUE))
         );
-        topPanelLayout.setVerticalGroup(
-            topPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(topPanelLayout.createSequentialGroup()
+        jPanelTopLayout.setVerticalGroup(
+            jPanelTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanelTopLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(topPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(topPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(jPanelTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanelTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(btnNewTable)
                         .addComponent(btnNewTournament))
-                    .addGroup(topPanelLayout.createSequentialGroup()
-                        .addGroup(topPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(filterBar1, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanelTopLayout.createSequentialGroup()
+                        .addGroup(jPanelTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(filterBar1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(btnQuickStart))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(filterBar2, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(filterBar2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap())
         );
 
-        jPanel2.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
-        jPanel2.setPreferredSize(new java.awt.Dimension(664, 39));
-
-        jLabel1.setFont(new java.awt.Font("Tahoma", 1, 11)); // NOI18N
-        jLabel1.setText("Message of the Day:");
-        jLabel1.setAlignmentY(0.3F);
-
-        jLabel2.setText("You are playing Mage version 0.7.5. Welcome! -- Mage dev team --");
-
-        jButtonNext.setText("Next");
-        jButtonNext.setMaximumSize(new java.awt.Dimension(55, 25));
-        jButtonNext.setMinimumSize(new java.awt.Dimension(55, 25));
-        jButtonNext.setPreferredSize(new java.awt.Dimension(55, 25));
-        jButtonNext.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButtonNextActionPerformed(evt);
-            }
-        });
-
-        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
-        jPanel2.setLayout(jPanel2Layout);
-        jPanel2Layout.setHorizontalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addComponent(jButtonNext, javax.swing.GroupLayout.PREFERRED_SIZE, 65, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, 705, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-        jPanel2Layout.setVerticalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButtonNext, javax.swing.GroupLayout.PREFERRED_SIZE, 17, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel2)
-                    .addComponent(jLabel1))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.WEST;
+        add(jPanelTop, gridBagConstraints);
 
         jSplitPane1.setBorder(null);
         jSplitPane1.setDividerSize(10);
         jSplitPane1.setResizeWeight(1.0);
 
-        jSplitPane2.setBorder(null);
-        jSplitPane2.setDividerSize(10);
-        jSplitPane2.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
-        jSplitPane2.setResizeWeight(0.5);
+        jSplitPaneTables.setBorder(null);
+        jSplitPaneTables.setDividerSize(10);
+        jSplitPaneTables.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
+        jSplitPaneTables.setResizeWeight(0.5);
 
-        jScrollPane1.setBorder(null);
+        jScrollPaneTablesActive.setBorder(null);
+        jScrollPaneTablesActive.setViewportBorder(null);
 
         tableTables.setModel(this.tableModel);
-        jScrollPane1.setViewportView(tableTables);
+        jScrollPaneTablesActive.setViewportView(tableTables);
 
-        jSplitPane2.setLeftComponent(jScrollPane1);
+        jSplitPaneTables.setLeftComponent(jScrollPaneTablesActive);
 
-        jScrollPane2.setBorder(null);
-        jScrollPane2.setMinimumSize(new java.awt.Dimension(23, 0));
+        jScrollPaneTablesFinished.setBorder(null);
+        jScrollPaneTablesFinished.setViewportBorder(null);
+        jScrollPaneTablesFinished.setMinimumSize(new java.awt.Dimension(23, 0));
 
         tableCompleted.setModel(this.matchesModel);
-        jScrollPane2.setViewportView(tableCompleted);
+        jScrollPaneTablesFinished.setViewportView(tableCompleted);
 
-        jSplitPane2.setRightComponent(jScrollPane2);
+        jSplitPaneTables.setRightComponent(jScrollPaneTablesFinished);
 
-        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
-        jPanel3.setLayout(jPanel3Layout);
-        jPanel3Layout.setHorizontalGroup(
-            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jSplitPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 810, Short.MAX_VALUE)
+        javax.swing.GroupLayout jPanelTablesLayout = new javax.swing.GroupLayout(jPanelTables);
+        jPanelTables.setLayout(jPanelTablesLayout);
+        jPanelTablesLayout.setHorizontalGroup(
+            jPanelTablesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jSplitPaneTables, javax.swing.GroupLayout.DEFAULT_SIZE, 23, Short.MAX_VALUE)
         );
-        jPanel3Layout.setVerticalGroup(
-            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jSplitPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 526, Short.MAX_VALUE)
+        jPanelTablesLayout.setVerticalGroup(
+            jPanelTablesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jSplitPaneTables, javax.swing.GroupLayout.DEFAULT_SIZE, 672, Short.MAX_VALUE)
         );
 
-        jSplitPane1.setLeftComponent(jPanel3);
+        jSplitPane1.setLeftComponent(jPanelTables);
         jSplitPane1.setRightComponent(chatPanelMain);
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
-        this.setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(topPanel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(jSplitPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 908, Short.MAX_VALUE)
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 908, Short.MAX_VALUE))
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addComponent(topPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, 0)
-                .addComponent(jSplitPane1)
-                .addGap(0, 0, 0)
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGap(0, 598, Short.MAX_VALUE))
-        );
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.WEST;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.weighty = 1.0;
+        add(jSplitPane1, gridBagConstraints);
+
+        jPanelBottom.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jPanelBottom.setPreferredSize(new java.awt.Dimension(516, 37));
+        jPanelBottom.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+
+        jButtonFooterNext.setText("Next");
+        jButtonFooterNext.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        jButtonFooterNext.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jButtonFooterNext.setOpaque(false);
+        jButtonFooterNext.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonFooterNextActionPerformed(evt);
+            }
+        });
+        jPanelBottom.add(jButtonFooterNext);
+
+        jLabelFooterLabel.setFont(new java.awt.Font("Tahoma", 1, 11)); // NOI18N
+        jLabelFooterLabel.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        jLabelFooterLabel.setText("Message of the Day:");
+        jLabelFooterLabel.setAlignmentY(0.3F);
+        jPanelBottom.add(jLabelFooterLabel);
+
+        jLabelFooterText.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        jLabelFooterText.setText("You are playing Mage version 0.7.5. Welcome! -- Mage dev team --");
+        jPanelBottom.add(jLabelFooterText);
+
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridy = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.WEST;
+        add(jPanelBottom, gridBagConstraints);
     }// </editor-fold>//GEN-END:initComponents
 
         private void btnNewTournamentActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNewTournamentActionPerformed
@@ -1138,6 +1180,7 @@ public class TablesPanel extends javax.swing.JPanel {
             options.setFreeMulligans(2);
             options.setSkillLevel(SkillLevel.CASUAL);
             options.setRollbackTurnsAllowed(true);
+            options.setQuitRatio(100);
             table = session.createTable(roomId, options);
 
             session.joinTable(roomId, table.getTableId(), "Human", "Human", 1, DeckImporterUtil.importDeck("test.dck"), "");
@@ -1152,17 +1195,17 @@ public class TablesPanel extends javax.swing.JPanel {
         newTableDialog.showDialog(roomId);
     }//GEN-LAST:event_btnNewTableActionPerformed
 
-    private void jButtonNextActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonNextActionPerformed
+    private void jButtonFooterNextActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonFooterNextActionPerformed
         synchronized (this) {
             if (messages != null && !messages.isEmpty()) {
                 currentMessage++;
                 if (currentMessage >= messages.size()) {
                     currentMessage = 0;
                 }
-                this.jLabel2.setText(messages.get(currentMessage));
+                this.jLabelFooterText.setText(messages.get(currentMessage));
             }
         }
-    }//GEN-LAST:event_jButtonNextActionPerformed
+    }//GEN-LAST:event_jButtonFooterNextActionPerformed
 
     private void btnFilterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFilterActionPerformed
         setTableFilter();
@@ -1170,15 +1213,15 @@ public class TablesPanel extends javax.swing.JPanel {
 
     private void btnStateFinishedActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStateFinishedActionPerformed
         if (this.btnStateFinished.isSelected()) {
-            this.jSplitPane2.setDividerLocation(-1);
+            this.jSplitPaneTables.setDividerLocation(-1);
         } else {
-            this.jSplitPane2.setDividerLocation(this.jPanel3.getHeight());
+            this.jSplitPaneTables.setDividerLocation(this.jPanelTables.getHeight());
         }
         this.startTasks();
     }//GEN-LAST:event_btnStateFinishedActionPerformed
 
     private void handleError(Exception ex) {
-        logger.fatal("Error loading deck: ", ex);
+        LOGGER.fatal("Error loading deck: ", ex);
         JOptionPane.showMessageDialog(MageFrame.getDesktop(), "Error loading deck.", "Error", JOptionPane.ERROR_MESSAGE);
     }
 
@@ -1207,22 +1250,22 @@ public class TablesPanel extends javax.swing.JPanel {
     private mage.client.table.PlayersChatPanel chatPanelMain;
     private javax.swing.JToolBar filterBar1;
     private javax.swing.JToolBar filterBar2;
-    private javax.swing.JButton jButtonNext;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JPanel jPanel2;
-    private javax.swing.JPanel jPanel3;
-    private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JButton jButtonFooterNext;
+    private javax.swing.JLabel jLabelFooterLabel;
+    private javax.swing.JLabel jLabelFooterText;
+    private javax.swing.JPanel jPanelBottom;
+    private javax.swing.JPanel jPanelTables;
+    private javax.swing.JPanel jPanelTop;
+    private javax.swing.JScrollPane jScrollPaneTablesActive;
+    private javax.swing.JScrollPane jScrollPaneTablesFinished;
     private javax.swing.JToolBar.Separator jSeparator1;
     private javax.swing.JToolBar.Separator jSeparator2;
     private javax.swing.JToolBar.Separator jSeparator3;
     private javax.swing.JToolBar.Separator jSeparator4;
     private javax.swing.JSplitPane jSplitPane1;
-    private javax.swing.JSplitPane jSplitPane2;
+    private javax.swing.JSplitPane jSplitPaneTables;
     private javax.swing.JTable tableCompleted;
     private javax.swing.JTable tableTables;
-    private javax.swing.JPanel topPanel;
     // End of variables declaration//GEN-END:variables
 
 }
@@ -1239,9 +1282,10 @@ class TableTableModel extends AbstractTableModel {
     public static final int COLUMN_INFO = 4;
     public static final int COLUMN_STATUS = 5;
     public static final int COLUMN_SKILL = 7;
-    public static final int ACTION_COLUMN = 8; // column the action is located (starting with 0)
+    public static final int COLUMN_QUIT_RATIO = 8;
+    public static final int ACTION_COLUMN = 9; // column the action is located (starting with 0)
 
-    private final String[] columnNames = new String[]{"M/T", "Deck Type", "Owner / Players", "Game Type", "Info", "Status", "Created / Started", "Skill Level", "Action"};
+    private final String[] columnNames = new String[]{"M/T", "Deck Type", "Owner / Players", "Game Type", "Info", "Status", "Created / Started", "Skill Level", "Quit %", "Action"};
 
     private TableView[] tables = new TableView[0];
     private static final DateFormat timeFormatter = new SimpleDateFormat("HH:mm:ss");
@@ -1288,6 +1332,8 @@ class TableTableModel extends AbstractTableModel {
             case 7:
                 return tables[arg0].getSkillLevel();
             case 8:
+                return tables[arg0].getQuitRatio();
+            case 9:
                 switch (tables[arg0].getTableState()) {
 
                     case WAITING:
@@ -1314,14 +1360,14 @@ class TableTableModel extends AbstractTableModel {
                     default:
                         return "";
                 }
-            case 9:
-                return tables[arg0].isTournament();
             case 10:
+                return tables[arg0].isTournament();
+            case 11:
                 if (!tables[arg0].getGames().isEmpty()) {
                     return tables[arg0].getGames().get(0);
                 }
                 return null;
-            case 11:
+            case 12:
                 return tables[arg0].getTableId();
         }
         return "";
@@ -1496,12 +1542,10 @@ class MatchesTableModel extends AbstractTableModel {
             case 6:
                 if (matches[arg0].isTournament()) {
                     return "Show";
+                } else if (matches[arg0].isReplayAvailable()) {
+                    return "Replay";
                 } else {
-                    if (matches[arg0].isReplayAvailable()) {
-                        return "Replay";
-                    } else {
-                        return "None";
-                    }
+                    return "None";
                 }
             case 7:
                 return matches[arg0].getGames();

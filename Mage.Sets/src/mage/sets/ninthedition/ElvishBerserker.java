@@ -29,7 +29,9 @@ package mage.sets.ninthedition;
 
 import java.util.UUID;
 import mage.MageInt;
-import mage.abilities.common.BecomesBlockedByCreatureTriggeredAbility;
+import mage.abilities.common.BecomesBlockedTriggeredAbility;
+import mage.abilities.dynamicvalue.common.BlockedCreatureCount;
+import mage.abilities.effects.Effect;
 import mage.abilities.effects.common.continuous.BoostSourceEffect;
 import mage.cards.CardImpl;
 import mage.constants.CardType;
@@ -51,7 +53,10 @@ public class ElvishBerserker extends CardImpl {
         this.toughness = new MageInt(1);
 
         // Whenever Elvish Berserker becomes blocked, it gets +1/+1 until end of turn for each creature blocking it.
-        this.addAbility(new BecomesBlockedByCreatureTriggeredAbility(new BoostSourceEffect(1, 1, Duration.EndOfTurn), false));
+        BlockedCreatureCount value = new BlockedCreatureCount();
+        Effect effect = new BoostSourceEffect(value, value, Duration.EndOfTurn, true);
+        effect.setText("it gets +1/+1 until end of turn for each creature blocking it");
+        this.addAbility(new BecomesBlockedTriggeredAbility(effect, false));
     }
 
     public ElvishBerserker(final ElvishBerserker card) {

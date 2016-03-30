@@ -48,7 +48,7 @@ public class GravenCairns extends CardImpl {
         super(ownerId, 272, "Graven Cairns", Rarity.RARE, new CardType[]{CardType.LAND}, "");
         this.expansionSetCode = "SHM";
 
-        // {T}: Add {1} to your mana pool.
+        // {T}: Add {C} to your mana pool.
         this.addAbility(new ColorlessManaAbility());
         
         // {B/R}, {tap}: Add {B}{B}, {B}{R}, or {R}{R} to your mana pool.
@@ -56,7 +56,7 @@ public class GravenCairns extends CardImpl {
         ability.addCost(new TapSourceCost());
         this.addAbility(ability);
 
-        ability = new SimpleManaAbility(Zone.BATTLEFIELD, new Mana(1, 0, 0, 0, 1, 0, 0), new ManaCostsImpl("{B/R}"));
+        ability = new SimpleManaAbility(Zone.BATTLEFIELD, new Mana(1, 0, 0, 0, 1, 0, 0, 0), new ManaCostsImpl("{B/R}"));
         ability.addCost(new TapSourceCost());
         this.addAbility(ability);
 

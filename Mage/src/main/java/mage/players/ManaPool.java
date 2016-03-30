@@ -35,9 +35,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import mage.ConditionalMana;
-import mage.MageObject;
 import mage.Mana;
 import mage.abilities.Ability;
+import mage.abilities.costs.Cost;
 import mage.constants.Duration;
 import mage.constants.ManaType;
 import mage.constants.TurnPhase;
@@ -108,9 +108,10 @@ public class ManaPool implements Serializable {
      * @param ability
      * @param filter
      * @param game
+     * @param costToPay complete costs to pay (needed to check conditional mana)
      * @return
      */
-    public boolean pay(ManaType manaType, Ability ability, Filter filter, Game game) {
+    public boolean pay(ManaType manaType, Ability ability, Filter filter, Game game, Cost costToPay) {
         if (!autoPayment && !manaType.equals(unlockedManaType)) {
             // if manual payment and the needed mana type was not unlocked, nothing will be paid
             return false;
@@ -121,15 +122,14 @@ public class ManaPool implements Serializable {
             return false;
         }
 
-        if (getConditional(manaType, ability, filter, game) > 0) {
-            removeConditional(manaType, ability, game);
+        if (getConditional(manaType, ability, filter, game, costToPay) > 0) {
+            removeConditional(manaType, ability, game, costToPay);
             lockManaType(); // pay only one mana if mana payment is set to manually
             return true;
         }
         for (ManaPoolItem mana : manaItems) {
             if (filter != null) {
-                MageObject sourceObject = game.getObject(mana.getSourceId());
-                if (!filter.match(sourceObject, game)) {
+                if (!filter.match(mana.getSourceObject(), game)) {
                     continue;
                 }
             }
@@ -160,13 +160,15 @@ public class ManaPool implements Serializable {
         return getMana().get(manaType);
     }
 
-    private int getConditional(ManaType manaType, Ability ability, Filter filter, Game game) {
+    private int getConditional(ManaType manaType, Ability ability, Filter filter, Game game, Cost costToPay) {
         if (ability == null || getConditionalMana().isEmpty()) {
             return 0;
         }
         for (ManaPoolItem mana : manaItems) {
-            if (mana.isConditional() && mana.getConditionalMana().get(manaType) > 0 && mana.getConditionalMana().apply(ability, game, mana.getSourceId())) {
-                if (filter == null || filter.match(game.getObject(mana.getSourceId()), game)) {
+            if (mana.isConditional()
+                    && mana.getConditionalMana().get(manaType) > 0
+                    && mana.getConditionalMana().apply(ability, game, mana.getSourceId(), costToPay)) {
+                if (filter == null || filter.match(mana.getSourceObject(), game)) {
                     return mana.getConditionalMana().get(manaType);
                 }
             }
@@ -174,13 +176,13 @@ public class ManaPool implements Serializable {
         return 0;
     }
 
-    public int getConditionalCount(Ability ability, Game game, FilterMana filter) {
+    public int getConditionalCount(Ability ability, Game game, FilterMana filter, Cost costToPay) {
         if (ability == null || getConditionalMana().isEmpty()) {
             return 0;
         }
         int count = 0;
         for (ConditionalMana mana : getConditionalMana()) {
-            if (mana.apply(ability, game, mana.getManaProducerId())) {
+            if (mana.apply(ability, game, mana.getManaProducerId(), costToPay)) {
                 count += mana.count(filter);
             }
         }
@@ -249,7 +251,7 @@ public class ManaPool implements Serializable {
             ManaPoolItem item = it.next();
             if (item.isConditional()) {
                 ConditionalMana cm = item.getConditionalMana();
-                if (cm.apply(ability, game, cm.getManaProducerId())) {
+                if (cm.apply(ability, game, cm.getManaProducerId(), null)) {
                     total += item.count();
                     it.remove();
                 }
@@ -279,7 +281,7 @@ public class ManaPool implements Serializable {
             ManaPoolItem item = it.next();
             if (item.isConditional()) {
                 ConditionalMana c = item.getConditionalMana();
-                if (c.apply(ability, game, c.getManaProducerId())) {
+                if (c.apply(ability, game, c.getManaProducerId(), null)) {
                     int count = c.count(filter);
                     if (count > 0) {
                         total += count;
@@ -310,7 +312,7 @@ public class ManaPool implements Serializable {
                     total += item.getGreen();
                     item.removeGreen();
                 }
-                if (filter.isColorless()) {
+                if (filter.isGeneric()) {
                     total += item.getColorless();
                     item.removeColorless();
                 }
@@ -342,9 +344,6 @@ public class ManaPool implements Serializable {
         if (filter.isBlue()) {
             m.setBlue(test.getBlue());
         }
-        if (filter.isColorless()) {
-            m.setColorless(test.getColorless());
-        }
         if (filter.isGreen()) {
             m.setGreen(test.getGreen());
         }
@@ -354,12 +353,18 @@ public class ManaPool implements Serializable {
         if (filter.isWhite()) {
             m.setWhite(test.getWhite());
         }
+        if (filter.isColorless()) {
+            m.setColorless(test.getColorless());
+        }
+        if (filter.isGeneric()) {
+            m.setGeneric(test.getGeneric());
+        }
         return m;
     }
 
     public Mana getAllConditionalMana(Ability ability, Game game, FilterMana filter) {
         Mana m = new Mana();
-        m.setColorless(getConditionalCount(ability, game, filter));
+        m.setGeneric(getConditionalCount(ability, game, filter, null));
         return m;
     }
 
@@ -371,13 +376,13 @@ public class ManaPool implements Serializable {
         Mana mana = manaToAdd.copy();
         if (!game.replaceEvent(new ManaEvent(EventType.ADD_MANA, source.getId(), source.getSourceId(), playerId, mana))) {
             if (mana instanceof ConditionalMana) {
-                ManaPoolItem item = new ManaPoolItem((ConditionalMana) mana, source.getSourceId(), source.getOriginalId());
+                ManaPoolItem item = new ManaPoolItem((ConditionalMana) mana, source.getSourceObject(game), source.getOriginalId());
                 if (emptyOnTurnsEnd) {
                     item.setDuration(Duration.EndOfTurn);
                 }
                 this.manaItems.add(item);
             } else {
-                ManaPoolItem item = new ManaPoolItem(mana.getRed(), mana.getGreen(), mana.getBlue(), mana.getWhite(), mana.getBlack(), mana.getColorless(), source.getSourceId(), source.getOriginalId(), mana.getFlag());
+                ManaPoolItem item = new ManaPoolItem(mana.getRed(), mana.getGreen(), mana.getBlue(), mana.getWhite(), mana.getBlack(), mana.getGeneric() + mana.getColorless(), source.getSourceObject(game), source.getOriginalId(), mana.getFlag());
                 if (emptyOnTurnsEnd) {
                     item.setDuration(Duration.EndOfTurn);
                 }
@@ -411,9 +416,9 @@ public class ManaPool implements Serializable {
         return new ManaPool(this);
     }
 
-    private void removeConditional(ManaType manaType, Ability ability, Game game) {
+    private void removeConditional(ManaType manaType, Ability ability, Game game, Cost costToPay) {
         for (ConditionalMana mana : getConditionalMana()) {
-            if (mana.get(manaType) > 0 && mana.apply(ability, game, mana.getManaProducerId())) {
+            if (mana.get(manaType) > 0 && mana.apply(ability, game, mana.getManaProducerId(), costToPay)) {
                 mana.set(manaType, mana.get(manaType) - 1);
                 GameEvent event = new GameEvent(GameEvent.EventType.MANA_PAYED, ability.getId(), mana.getManaProducerId(), ability.getControllerId(), 0, mana.getFlag());
                 event.setData(mana.getManaProducerOriginalId().toString());

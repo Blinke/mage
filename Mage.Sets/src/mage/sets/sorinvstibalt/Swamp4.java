@@ -31,7 +31,7 @@ import java.util.UUID;
 
 /**
  *
- * @author LevelX2
+ * @author fireshoes
  */
 public class Swamp4 extends mage.cards.basiclands.Swamp {
 

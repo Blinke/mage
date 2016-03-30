@@ -30,7 +30,8 @@ package mage.client.game;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.GridBagLayout;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -38,11 +39,12 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.UUID;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
@@ -50,6 +52,7 @@ import mage.client.MageFrame;
 import mage.client.components.MageTextArea;
 import mage.client.game.FeedbackPanel.FeedbackMode;
 import static mage.client.game.FeedbackPanel.FeedbackMode.QUESTION;
+import mage.client.util.GUISizeHelper;
 import static mage.constants.PlayerAction.REQUEST_AUTO_ANSWER_ID_NO;
 import static mage.constants.PlayerAction.REQUEST_AUTO_ANSWER_ID_YES;
 import static mage.constants.PlayerAction.REQUEST_AUTO_ANSWER_RESET_ALL;
@@ -70,8 +73,9 @@ public class HelperPanel extends JPanel {
     private javax.swing.JButton btnUndo;
     //private javax.swing.JButton btnEndTurn;
     //private javax.swing.JButton btnStopTimer;
-
-    private MageTextArea textArea;
+    private JScrollPane textAreaScrollPane;
+    private MageTextArea dialogTextArea;
+    JPanel buttonContainer;
 
     private javax.swing.JButton linkLeft;
     private javax.swing.JButton linkRight;
@@ -107,45 +111,81 @@ public class HelperPanel extends JPanel {
         session = MageFrame.getSession();
     }
 
+    public void changeGUISize() {
+        setGUISize();
+    }
+
+    private void setGUISize() {
+        //this.setMaximumSize(new Dimension(getParent().getWidth(), Integer.MAX_VALUE));
+        textAreaScrollPane.setMaximumSize(new Dimension(getParent().getWidth(), GUISizeHelper.gameDialogAreaTextHeight));
+        textAreaScrollPane.setPreferredSize(new Dimension(getParent().getWidth(), GUISizeHelper.gameDialogAreaTextHeight));
+
+//        dialogTextArea.setMaximumSize(new Dimension(getParent().getWidth(), Integer.MAX_VALUE));
+//        dialogTextArea.setPreferredSize(new Dimension(getParent().getWidth(), GUISizeHelper.gameDialogAreaTextHeight));
+//        buttonContainer.setPreferredSize(new Dimension(getParent().getWidth(), GUISizeHelper.gameDialogButtonHeight + 4));
+//        buttonContainer.setMinimumSize(new Dimension(160, GUISizeHelper.gameDialogButtonHeight + 20));
+//        buttonContainer.setMaximumSize(new Dimension(Integer.MAX_VALUE, GUISizeHelper.gameDialogButtonHeight + 4));
+        btnLeft.setFont(GUISizeHelper.gameDialogAreaFont);
+        btnRight.setFont(GUISizeHelper.gameDialogAreaFont);
+        btnSpecial.setFont(GUISizeHelper.gameDialogAreaFont);
+        btnUndo.setFont(GUISizeHelper.gameDialogAreaFont);
+
+        if (message != null) {
+            int pos = this.message.indexOf("font-size:");
+            if (pos > 0) {
+                String newMessage = this.message.substring(0, pos + 10) + GUISizeHelper.gameDialogAreaFontSizeBig + this.message.substring(pos + 12);
+                pos = this.message.indexOf("font-size:", pos + 10);
+                if (pos > 0) {
+                    newMessage = this.message.substring(0, pos + 10) + GUISizeHelper.gameDialogAreaFontSizeSmall + this.message.substring(pos + 12);
+                }
+                setBasicMessage(newMessage);
+            }
+        }
+
+        GUISizeHelper.changePopupMenuFont(popupMenuAskNo);
+        GUISizeHelper.changePopupMenuFont(popupMenuAskYes);
+        revalidate();
+        repaint();
+    }
+
     private void initComponents() {
         initPopupMenuTriggerOrder();
         setBackground(new Color(0, 0, 0, 100));
-        //setLayout(new GridBagLayout());
-        setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
+        setLayout(new GridLayout(0, 1));
         setOpaque(false);
 
-        JPanel container = new JPanel();
+        dialogTextArea = new MageTextArea();
+        dialogTextArea.setText("<Empty>");
+        dialogTextArea.setOpaque(false);
 
-        container.setPreferredSize(new Dimension(100, 30));
-        container.setMinimumSize(new Dimension(20, 20));
-        container.setMaximumSize(new Dimension(2000, 100));
-        container.setLayout(new GridBagLayout());
-        container.setOpaque(false);
+        textAreaScrollPane = new JScrollPane(dialogTextArea, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        textAreaScrollPane.setOpaque(false);
+        textAreaScrollPane.setBackground(new Color(0, 0, 0, 0));
+        textAreaScrollPane.getViewport().setOpaque(false);
+        textAreaScrollPane.setBorder(null);
+        textAreaScrollPane.setViewportBorder(null);
+        add(textAreaScrollPane);
 
-        JPanel jPanel = new JPanel();
-
-        textArea = new MageTextArea();
-        textArea.setText("<Empty>");
-
-        jPanel.setOpaque(false);
-        jPanel.setBackground(new Color(0, 0, 0, 80));
-        jPanel.add(textArea);
-        add(jPanel);
-
-        add(container);
+        buttonContainer = new JPanel();
+        buttonContainer.setLayout(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        buttonContainer.setOpaque(false);
+        add(buttonContainer);
 
         btnSpecial = new JButton("Special");
         btnSpecial.setVisible(false);
-        container.add(btnSpecial);
+        buttonContainer.add(btnSpecial);
+
         btnLeft = new JButton("OK");
         btnLeft.setVisible(false);
-        container.add(btnLeft);
+        buttonContainer.add(btnLeft);
+
         btnRight = new JButton("Cancel");
         btnRight.setVisible(false);
-        container.add(btnRight);
+        buttonContainer.add(btnRight);
+
         btnUndo = new JButton("Undo");
         btnUndo.setVisible(false);
-        container.add(btnUndo);
+        buttonContainer.add(btnUndo);
 
         MouseListener checkPopupAdapter = new MouseAdapter() {
             @Override
@@ -212,7 +252,7 @@ public class HelperPanel extends JPanel {
         });
 
         // sets a darker background and higher simiss time fur tooltip in the feedback / helper panel
-        textArea.addMouseListener(new MouseAdapter() {
+        dialogTextArea.addMouseListener(new MouseAdapter() {
 
             @Override
             public void mouseEntered(MouseEvent me) {
@@ -303,11 +343,11 @@ public class HelperPanel extends JPanel {
 
     public void setBasicMessage(String message) {
         this.message = message;
-        this.textArea.setText(message, this.getWidth());
+        this.dialogTextArea.setText(message, this.getWidth());
     }
 
     public void setTextArea(String message) {
-        this.textArea.setText(message, this.getWidth());
+        this.dialogTextArea.setText(message, this.getWidth());
     }
 
     @Override

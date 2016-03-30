@@ -54,6 +54,14 @@ import mage.util.TournamentUtil;
  */
 public class DeckGenerator {
 
+    public static class DeckGeneratorException extends RuntimeException {
+
+        public DeckGeneratorException(String message) {
+            super(message);
+        }
+
+    }
+
     private static final int MAX_TRIES = 8196;
     private static DeckGeneratorDialog genDialog;
     private static DeckGeneratorPool genPool;
@@ -82,6 +90,9 @@ public class DeckGenerator {
         String format = genDialog.getSelectedFormat();
 
         List<String> setsToUse = ConstructedFormats.getSetsByFormat(format);
+        if (setsToUse == null) {
+            throw new DeckGeneratorException("Deck sets aren't initialized; please connect to a server to update the database.");
+        }
         if (setsToUse.isEmpty()) {
             // Default to using all sets
             setsToUse = ExpansionRepository.instance.getSetCodes();
@@ -144,7 +155,10 @@ public class DeckGenerator {
      * @return the final deck to use.
      */
     private static Deck generateDeck(int deckSize, List<ColoredManaSymbol> allowedColors, List<String> setsToUse) {
-        genPool = new DeckGeneratorPool(deckSize, allowedColors, genDialog.isSingleton());
+
+        genPool = new DeckGeneratorPool(deckSize, genDialog.getCreaturePercentage(), genDialog.getNonCreaturePercentage(),
+                                        genDialog.getLandPercentage(), allowedColors, genDialog.isSingleton(), genDialog.isColorless(),
+                                        genDialog.isAdvanced(), genDialog.getDeckGeneratorCMC());
 
         final String[] sets = setsToUse.toArray(new String[setsToUse.size()]);
 
@@ -199,7 +213,7 @@ public class DeckGenerator {
     private static void generateSpells(CardCriteria criteria, int spellCount) {
         List<CardInfo> cardPool = CardRepository.instance.findCards(criteria);
         int retrievedCount = cardPool.size();
-        List<DeckGeneratorCMC> deckCMCs = genPool.getCMCsForSpellCount(spellCount);
+        List<DeckGeneratorCMC.CMC> deckCMCs = genPool.getCMCsForSpellCount(spellCount);
         Random random = new Random();
         int count = 0;
         int reservesAdded = 0;
@@ -210,7 +224,7 @@ public class DeckGenerator {
                 Card card = cardPool.get(random.nextInt(retrievedCount)).getMockCard();
                 if (genPool.isValidSpellCard(card)) {
                     int cardCMC = card.getManaCost().convertedManaCost();
-                    for (DeckGeneratorCMC deckCMC : deckCMCs) {
+                    for (DeckGeneratorCMC.CMC deckCMC : deckCMCs) {
                         if (cardCMC >= deckCMC.min && cardCMC <= deckCMC.max) {
                             int currentAmount = deckCMC.getAmount();
                             if (currentAmount > 0) {
@@ -328,8 +342,9 @@ public class DeckGenerator {
      * database.
      */
     private static void addBasicLands(int landsNeeded, Map<String, Double> percentage, Map<String, Integer> count, Map<String, List<CardInfo>> basicLands) {
+
         int colorTotal = 0;
-        ColoredManaSymbol colorToAdd = null;
+        ColoredManaSymbol colorToAdd = ColoredManaSymbol.U;
 
         // Add up the totals for all colors, to keep track of the percentage a color is.
         for (Map.Entry<String, Integer> c : count.entrySet()) {
@@ -361,12 +376,10 @@ public class DeckGenerator {
                     minPercentage = (neededPercentage - thisPercentage);
                 }
             }
-            if (colorToAdd != null) {
-                genPool.addCard(getBasicLand(colorToAdd, basicLands));
-                count.put(colorToAdd.toString(), count.get(colorToAdd.toString()) + 1);
-                colorTotal++;
-                landsNeeded--;
-            }
+            genPool.addCard(getBasicLand(colorToAdd, basicLands));
+            count.put(colorToAdd.toString(), count.get(colorToAdd.toString()) + 1);
+            colorTotal++;
+            landsNeeded--;
         }
     }
 

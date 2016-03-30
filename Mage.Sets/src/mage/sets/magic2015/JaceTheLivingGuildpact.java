@@ -110,7 +110,7 @@ class JaceTheLivingGuildpactEffect extends OneShotEffect {
     public boolean apply(Game game, Ability source) {
         Player controller = game.getPlayer(source.getControllerId());
         if (controller != null) {
-            for (UUID playerId : controller.getInRange()) {
+            for (UUID playerId : game.getState().getPlayersInRange(controller.getId(), game)) {
                 Player player = game.getPlayer(playerId);
                 if (player != null) {
                     for (Card card : player.getHand().getCards(game)) {
@@ -119,7 +119,7 @@ class JaceTheLivingGuildpactEffect extends OneShotEffect {
                     for (Card card : player.getGraveyard().getCards(game)) {
                         card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, true);
                     }
-                    player.shuffleLibrary(game);
+                    player.shuffleLibrary(source, game);
                 }
             }
             controller.drawCards(7, game);

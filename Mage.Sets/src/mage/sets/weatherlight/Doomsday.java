@@ -27,6 +27,7 @@
  */
 package mage.sets.weatherlight;
 
+import java.util.UUID;
 import mage.abilities.Ability;
 import mage.abilities.effects.OneShotEffect;
 import mage.cards.Card;
@@ -41,8 +42,6 @@ import mage.filter.FilterCard;
 import mage.game.Game;
 import mage.players.Player;
 import mage.target.TargetCard;
-
-import java.util.UUID;
 
 /**
  *
@@ -92,12 +91,12 @@ class DoomsdayEffect extends OneShotEffect {
         
         if (player != null) {
             //Search your library and graveyard for five cards
-            Cards allCards = new CardsImpl(Zone.PICK);
-            Cards cards = new CardsImpl(Zone.PICK);
+            Cards allCards = new CardsImpl();
+            Cards cards = new CardsImpl();
             allCards.addAll(player.getLibrary().getCardList());
             allCards.addAll(player.getGraveyard());
             int number = Math.min(5, allCards.size());
-            TargetCard target = new TargetCard(number, number, Zone.PICK, new FilterCard());
+            TargetCard target = new TargetCard(number, number, Zone.ALL, new FilterCard());
             
             if (player.choose(Outcome.Benefit, allCards, target, game)){
                 // exile the rest
@@ -114,7 +113,7 @@ class DoomsdayEffect extends OneShotEffect {
                     
                 }
                 //Put the chosen cards on top of your library in any order
-                target = new TargetCard(Zone.PICK, new FilterCard("Card to put on top"));
+                target = new TargetCard(Zone.ALL, new FilterCard("Card to put on top"));
                 while (cards.size() > 1 && player.canRespond()) {
                     player.choose(Outcome.Neutral, cards, target, game);
                     Card card = cards.get(target.getFirstTarget(), game);

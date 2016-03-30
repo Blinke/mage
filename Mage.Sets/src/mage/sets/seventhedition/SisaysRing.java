@@ -46,8 +46,8 @@ public class SisaysRing extends CardImpl {
         super(ownerId, 315, "Sisay's Ring", Rarity.UNCOMMON, new CardType[]{CardType.ARTIFACT}, "{4}");
         this.expansionSetCode = "7ED";
 
-        // {tap}: Add {2} to your mana pool.
-        this.addAbility(new SimpleManaAbility(Zone.BATTLEFIELD, new Mana(0,0,0,0,0,2,0), new TapSourceCost()));
+        // {tap}: Add {C}{C} to your mana pool.
+        this.addAbility(new SimpleManaAbility(Zone.BATTLEFIELD, new Mana(0, 0, 0, 0, 0, 0, 0, 2), new TapSourceCost()));
     }
 
     public SisaysRing(final SisaysRing card) {

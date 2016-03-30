@@ -33,8 +33,11 @@ import mage.abilities.Ability;
 import mage.abilities.common.ActivateIfConditionActivatedAbility;
 import mage.abilities.condition.common.MyTurnCondition;
 import mage.abilities.costs.mana.ManaCostsImpl;
+import mage.abilities.effects.Effect;
 import mage.abilities.effects.common.continuous.BoostSourceEffect;
 import mage.abilities.effects.common.continuous.BoostTargetEffect;
+import mage.abilities.effects.common.continuous.GainAbilitySourceEffect;
+import mage.abilities.keyword.FearAbility;
 import mage.cards.CardImpl;
 import mage.constants.CardType;
 import mage.constants.Duration;
@@ -58,7 +61,12 @@ public class Fleshformer extends CardImpl {
         this.toughness = new MageInt(2);
 
         // {W}{U}{B}{R}{G}: Fleshformer gets +2/+2 and gains fear until end of turn. Target creature gets -2/-2 until end of turn. Activate this ability only during your turn.
-        Ability ability = new ActivateIfConditionActivatedAbility(Zone.BATTLEFIELD, new BoostSourceEffect(2, 2, Duration.EndOfTurn), new ManaCostsImpl("{W}{U}{B}{R}{G}"), MyTurnCondition.getInstance());
+        Effect effect = new BoostSourceEffect(2, 2, Duration.EndOfTurn);
+        effect.setText("{this} gets +2/+2");
+        Ability ability = new ActivateIfConditionActivatedAbility(Zone.BATTLEFIELD, effect, new ManaCostsImpl("{W}{U}{B}{R}{G}"), MyTurnCondition.getInstance());
+        effect = new GainAbilitySourceEffect(FearAbility.getInstance(), Duration.EndOfTurn);
+        effect.setText("and gains fear until end of turn");
+        ability.addEffect(effect);
         ability.addEffect(new BoostTargetEffect(-2, -2, Duration.EndOfTurn));
         ability.addTarget(new TargetCreaturePermanent());
         this.addAbility(ability);

@@ -49,7 +49,7 @@ public class FloodedGrove extends CardImpl {
         super(ownerId, 177, "Flooded Grove", Rarity.RARE, new CardType[]{CardType.LAND}, null);
         this.expansionSetCode = "EVE";
         
-        // {T}: Add {1} to your mana pool.
+        // {T}: Add {C} to your mana pool.
         this.addAbility(new ColorlessManaAbility());
         
         // {(G/U)}, {T}: Add {G}{G}, {G}{U}, or {U}{U} to your mana pool. 
@@ -57,7 +57,7 @@ public class FloodedGrove extends CardImpl {
         ability.addCost(new TapSourceCost());
         this.addAbility(ability);
 
-        ability = new SimpleManaAbility(Zone.BATTLEFIELD, new Mana(0, 1, 1, 0, 0, 0, 0), new ManaCostsImpl("{G/U}"));
+        ability = new SimpleManaAbility(Zone.BATTLEFIELD, new Mana(0, 1, 1, 0, 0, 0, 0, 0), new ManaCostsImpl("{G/U}"));
         ability.addCost(new TapSourceCost());
         this.addAbility(ability);
 

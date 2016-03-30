@@ -625,13 +625,16 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
             this.removeFromCombat(game);
             this.controlledFromStartOfControllerTurn = false;
 
-            this.abilities.setControllerId(controllerId);
+            this.getAbilities(game).setControllerId(controllerId);
             game.getContinuousEffects().setController(objectId, controllerId);
-
+            // the controller of triggered abilites is always set/checked before the abilities triggers so not needed here
             game.fireEvent(new GameEvent(EventType.LOST_CONTROL, objectId, objectId, beforeResetControllerId));
             game.fireEvent(new GameEvent(EventType.GAINED_CONTROL, objectId, objectId, controllerId));
 
             return true;
+        } else if (isCopy()) {// Because the previous copied abilities can be from another controller chnage controller in any case for abilities
+            this.getAbilities(game).setControllerId(controllerId);
+            game.getContinuousEffects().setController(objectId, controllerId);
         }
         return false;
     }
@@ -814,6 +817,11 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
                         dealtDamageByThisTurn = new HashSet<>();
                     }
                     dealtDamageByThisTurn.add(new MageObjectReference(source, game));
+                }
+                if (source == null) {
+                    game.informPlayers(getLogName() + " gets " + damageDone + " damage");
+                } else {
+                    game.informPlayers(source.getLogName() + " deals " + damageDone + " damage to " + getLogName());
                 }
             }
         }
@@ -1086,10 +1094,8 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
             if (!oneCanBeAttacked) {
                 return false;
             }
-        } else {
-            if (!canAttackCheckRestrictionEffects(defenderId, game)) {
-                return false;
-            }
+        } else if (!canAttackCheckRestrictionEffects(defenderId, game)) {
+            return false;
         }
 
         return !abilities.containsKey(DefenderAbility.getInstance().getId())
@@ -1103,7 +1109,7 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
                 return false;
             }
             for (Ability ability : effectEntry.getValue()) {
-                if (!effectEntry.getKey().canAttack(defenderId, ability, game)) {
+                if (!effectEntry.getKey().canAttack(this, defenderId, ability, game)) {
                     return false;
                 }
             }
@@ -1185,6 +1191,20 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
     }
 
     @Override
+    public boolean canTransform(Game game) {
+        for (Map.Entry entry : game.getContinuousEffects().getApplicableRestrictionEffects(this, game).entrySet()) {
+            RestrictionEffect effect = (RestrictionEffect) entry.getKey();
+            for (Ability ability : (HashSet<Ability>) entry.getValue()) {
+                if (!effect.canTransform(game)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    @Override
     public void setAttacking(boolean attacking) {
         this.attacking = attacking;
     }
@@ -1218,6 +1238,10 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
     public boolean removeFromCombat(Game game, boolean withInfo) {
         if (this.isAttacking() || this.blocking > 0) {
             return game.getCombat().removeFromCombat(objectId, game, withInfo);
+        } else if (getCardType().contains(CardType.PLANESWALKER)) {
+            if (game.getCombat().getDefenders().contains(getId())) {
+                game.getCombat().removePlaneswalkerFromCombat(objectId, game, withInfo);
+            }
         }
         return false;
     }

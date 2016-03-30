@@ -90,7 +90,7 @@ class BitterRevelationEffect extends OneShotEffect {
     public boolean apply(Game game, Ability source) {
         Player player = game.getPlayer(source.getControllerId());
         if (player != null) {
-            Cards cards = new CardsImpl(Zone.LIBRARY);
+            Cards cards = new CardsImpl();
             int cardsCount = Math.min(4, player.getLibrary().size());
             for (int i = 0; i < cardsCount; i++) {
                 Card card = player.getLibrary().removeFromTop(game);
@@ -101,7 +101,7 @@ class BitterRevelationEffect extends OneShotEffect {
             if (cards.size() > 0) {
                 Cards cardsToHand = new CardsImpl();
                 player.lookAtCards("Bitter Revelation", cards, game);
-                TargetCard target = new TargetCard(Math.min(2, cards.size()), Zone.PICK, new FilterCard("two cards to put in your hand"));
+                TargetCard target = new TargetCard(Math.min(2, cards.size()), Zone.LIBRARY, new FilterCard("two cards to put in your hand"));
                 if (player.choose(Outcome.DrawCard, cards, target, game)) {
                     for (UUID targetId : target.getTargets()) {
                         Card card = cards.get(targetId, game);

@@ -31,14 +31,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-import mage.constants.CardType;
-import mage.constants.Outcome;
-import mage.constants.Rarity;
-import mage.constants.Zone;
 import mage.abilities.Ability;
 import mage.abilities.effects.OneShotEffect;
 import mage.cards.CardImpl;
 import mage.cards.CardsImpl;
+import mage.constants.CardType;
+import mage.constants.Outcome;
+import mage.constants.Rarity;
+import mage.constants.Zone;
 import mage.filter.FilterCard;
 import mage.filter.common.FilterEnchantmentPermanent;
 import mage.game.Game;
@@ -104,7 +104,7 @@ class HarmonicConvergenceEffect extends OneShotEffect {
             list.add(permanent);
         }
 
-        TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put on top of your library"));
+        TargetCard target = new TargetCard(Zone.BATTLEFIELD, new FilterCard("card to put on top of your library"));
         for (UUID playerId : moveList.keySet()) {
             Player player = game.getPlayer(playerId);
             List<Permanent> list = moveList.get(playerId);
@@ -112,7 +112,7 @@ class HarmonicConvergenceEffect extends OneShotEffect {
                 continue;
             }
 
-            CardsImpl cards = new CardsImpl(Zone.PICK);
+            CardsImpl cards = new CardsImpl();
             for (Permanent permanent : list) {
                 cards.add(permanent);
             }

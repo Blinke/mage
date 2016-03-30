@@ -58,9 +58,9 @@ public class GhostQuarter extends CardImpl {
         super(ownerId, 240, "Ghost Quarter", Rarity.UNCOMMON, new CardType[]{CardType.LAND}, "");
         this.expansionSetCode = "ISD";
 
-        // {tap}: Add {1} to your mana pool.
+        // {T}: Add {C} to your mana pool.
         this.addAbility(new ColorlessManaAbility());
-        // {tap}, Sacrifice Ghost Quarter: Destroy target land. Its controller may search his or her library for a basic land card, put it onto the battlefield, then shuffle his or her library.
+        // {T}, Sacrifice Ghost Quarter: Destroy target land. Its controller may search his or her library for a basic land card, put it onto the battlefield, then shuffle his or her library.
         SimpleActivatedAbility ability = new SimpleActivatedAbility(Zone.BATTLEFIELD, new DestroyTargetEffect(), new TapSourceCost());
         ability.addCost(new SacrificeSourceCost());
         ability.addTarget(new TargetLandPermanent());
@@ -96,7 +96,7 @@ class GhostQuarterEffect extends OneShotEffect {
 
     @Override
     public boolean apply(Game game, Ability source) {
-        Permanent permanent = (Permanent) game.getPermanentOrLKIBattlefield(source.getFirstTarget()); // if indestructible effect should work also
+        Permanent permanent = game.getPermanentOrLKIBattlefield(source.getFirstTarget());
         if (permanent != null) {
             Player controller = game.getPlayer(permanent.getControllerId());
             if (controller.chooseUse(Outcome.PutLandInPlay, "Do you wish to search for a basic land, put it onto the battlefield and then shuffle your library?", source, game)) {
@@ -107,7 +107,7 @@ class GhostQuarterEffect extends OneShotEffect {
                         controller.moveCards(card, Zone.BATTLEFIELD, source, game);
                     }
                 }
-                controller.shuffleLibrary(game);
+                controller.shuffleLibrary(source, game);
             }
             return true;
         }

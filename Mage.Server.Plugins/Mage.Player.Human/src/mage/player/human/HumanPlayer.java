@@ -91,6 +91,7 @@ import mage.game.permanent.Permanent;
 import mage.game.tournament.Tournament;
 import mage.players.Player;
 import mage.players.PlayerImpl;
+import mage.players.PlayerList;
 import mage.target.Target;
 import mage.target.TargetAmount;
 import mage.target.TargetCard;
@@ -358,15 +359,13 @@ public class HumanPlayer extends PlayerImpl {
                                 }
                             }
                         }
-                    } else {
-                        if (target.canTarget(response.getUUID(), game)) {
-                            if (target.getTargets().contains(response.getUUID())) { // if already included remove it with
-                                target.remove(response.getUUID());
-                            } else {
-                                target.addTarget(response.getUUID(), null, game);
-                                if (target.doneChosing()) {
-                                    return true;
-                                }
+                    } else if (target.canTarget(response.getUUID(), game)) {
+                        if (target.getTargets().contains(response.getUUID())) { // if already included remove it with
+                            target.remove(response.getUUID());
+                        } else {
+                            target.addTarget(response.getUUID(), null, game);
+                            if (target.doneChosing()) {
+                                return true;
                             }
                         }
                     }
@@ -438,17 +437,16 @@ public class HumanPlayer extends PlayerImpl {
 
     @Override
     public boolean choose(Outcome outcome, Cards cards, TargetCard target, Game game) {
+        if (cards == null) {
+            return false;
+        }
         updateGameStatePriority("choose(4)", game);
         while (!abort) {
             boolean required = target.isRequired();
             // if there is no cards to select from, then add possibility to cancel choosing action
-            if (cards == null) {
+            int count = cards.count(target.getFilter(), game);
+            if (count == 0) {
                 required = false;
-            } else {
-                int count = cards.count(target.getFilter(), game);
-                if (count == 0) {
-                    required = false;
-                }
             }
             if (target.getTargets().size() >= target.getNumberOfTargets()) {
                 required = false;
@@ -530,12 +528,10 @@ public class HumanPlayer extends PlayerImpl {
             if (response.getUUID() != null) {
                 if (target.getTargets().contains(response.getUUID())) { // if already included remove it
                     target.remove(response.getUUID());
-                } else {
-                    if (target.canTarget(response.getUUID(), cards, game)) {
-                        target.addTarget(response.getUUID(), source, game);
-                        if (target.doneChosing()) {
-                            return true;
-                        }
+                } else if (target.canTarget(response.getUUID(), cards, game)) {
+                    target.addTarget(response.getUUID(), source, game);
+                    if (target.doneChosing()) {
+                        return true;
                     }
                 }
             } else {
@@ -592,6 +588,21 @@ public class HumanPlayer extends PlayerImpl {
             if (passedAllTurns) {
                 if (passWithManaPoolCheck(game)) {
                     return false;
+                }
+            }
+            if (passedUntilEndStepBeforeMyTurn) {
+
+                if (!game.getTurn().getStepType().equals(PhaseStep.END_TURN)) {
+                    if (passWithManaPoolCheck(game)) {
+                        return false;
+                    }
+                } else {
+                    PlayerList playerList = game.getState().getPlayerList(playerId);
+                    if (!playerList.getPrevious().equals(game.getActivePlayerId())) {
+                        if (passWithManaPoolCheck(game)) {
+                            return false;
+                        }
+                    }
                 }
             }
             if (game.getStack().isEmpty()) {
@@ -805,7 +816,7 @@ public class HumanPlayer extends PlayerImpl {
                     if (cost instanceof PhyrexianManaCost) {
                         PhyrexianManaCost ph = (PhyrexianManaCost) cost;
                         if (ph.canPay(null, null, playerId, game)) {
-                            ((PhyrexianManaCost) cost).pay(null, game, null, playerId, false);
+                            ((PhyrexianManaCost) cost).pay(null, game, null, playerId, false, null);
                         }
                         break;
                     }
@@ -883,7 +894,7 @@ public class HumanPlayer extends PlayerImpl {
         FilterCreatureForCombat filter = filterCreatureForCombat.copy();
         filter.add(new ControllerIdPredicate(attackingPlayerId));
         while (!abort) {
-            if (passedAllTurns
+            if (passedAllTurns || passedUntilEndStepBeforeMyTurn
                     || (!getUserData().getUserSkipPrioritySteps().isStopOnDeclareAttackersDuringSkipAction() && (passedTurn || passedUntilEndOfTurn || passedUntilNextMain))) {
                 return;
             }
@@ -1065,10 +1076,8 @@ public class HumanPlayer extends PlayerImpl {
                     // does not block yet and can block or can block more attackers
                     if (filter.match(blocker, null, playerId, game)) {
                         selectCombatGroup(defendingPlayerId, blocker.getId(), game);
-                    } else {
-                        if (filterBlock.match(blocker, null, playerId, game) && game.getStack().isEmpty()) {
-                            removeBlocker = true;
-                        }
+                    } else if (filterBlock.match(blocker, null, playerId, game) && game.getStack().isEmpty()) {
+                        removeBlocker = true;
                     }
 
                     if (removeBlocker) {
@@ -1233,7 +1242,7 @@ public class HumanPlayer extends PlayerImpl {
         updateGameStatePriority("activateAbility", game);
         if (abilities.size() == 1 && suppressAbilityPicker(abilities.values().iterator().next())) {
             ActivatedAbility ability = abilities.values().iterator().next();
-            if (ability.getTargets().size() != 0
+            if (!ability.getTargets().isEmpty()
                     || !(ability.getCosts().size() == 1 && ability.getCosts().get(0) instanceof SacrificeSourceCost)
                     || !(ability.getCosts().size() == 2 && ability.getCosts().get(0) instanceof TapSourceCost && ability.getCosts().get(0) instanceof SacrificeSourceCost)) {
                 activateAbility(ability, game);
@@ -1242,7 +1251,7 @@ public class HumanPlayer extends PlayerImpl {
         }
         game.fireGetChoiceEvent(playerId, name, object, new ArrayList<>(abilities.values()));
         waitForResponse(game);
-        if (response.getUUID() != null) {
+        if (response.getUUID() != null && isInGame()) {
             if (abilities.containsKey(response.getUUID())) {
                 activateAbility(abilities.get(response.getUUID()), game);
             }
@@ -1545,5 +1554,10 @@ public class HumanPlayer extends PlayerImpl {
         }
         pass(game);
         return true;
+    }
+
+    @Override
+    public String getHistory() {
+        return "no available";
     }
 }

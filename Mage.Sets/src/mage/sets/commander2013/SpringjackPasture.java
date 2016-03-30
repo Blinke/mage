@@ -70,7 +70,7 @@ public class SpringjackPasture extends CardImpl {
         super(ownerId, 326, "Springjack Pasture", Rarity.RARE, new CardType[]{CardType.LAND}, "");
         this.expansionSetCode = "C13";
 
-        // {tap}: Add {1} to your mana pool.
+        // {tap}: Add {C} to your mana pool.
         this.addAbility(new ColorlessManaAbility());
 
         // {4}, {tap}: Put a 0/1 white Goat creature token onto the battlefield.
@@ -115,15 +115,15 @@ class SpringjackPastureEffect extends OneShotEffect {
         if (you != null && choice != null) {
             int count = new GetXValue().calculate(game, source, this);
             if (choice.getColor().isBlack()) {
-                you.getManaPool().addMana(new Mana(0, 0, 0, 0, count, 0, 0), game, source);
+                you.getManaPool().addMana(new Mana(0, 0, 0, 0, count, 0, 0, 0), game, source);
             } else if (choice.getColor().isBlue()) {
-                you.getManaPool().addMana(new Mana(0, 0, count, 0, 0, 0, 0), game, source);
+                you.getManaPool().addMana(new Mana(0, 0, count, 0, 0, 0, 0, 0), game, source);
             } else if (choice.getColor().isRed()) {
-                you.getManaPool().addMana(new Mana(count, 0, 0, 0, 0, 0, 0), game, source);
+                you.getManaPool().addMana(new Mana(count, 0, 0, 0, 0, 0, 0, 0), game, source);
             } else if (choice.getColor().isGreen()) {
-                you.getManaPool().addMana(new Mana(0, count, 0, 0, 0, 0, 0), game, source);
+                you.getManaPool().addMana(new Mana(0, count, 0, 0, 0, 0, 0, 0), game, source);
             } else if (choice.getColor().isWhite()) {
-                you.getManaPool().addMana(new Mana(0, 0, 0, count, 0, 0, 0), game, source);
+                you.getManaPool().addMana(new Mana(0, 0, 0, count, 0, 0, 0, 0), game, source);
             }
             return true;
 

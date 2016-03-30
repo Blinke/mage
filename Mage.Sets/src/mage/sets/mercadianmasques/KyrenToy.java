@@ -28,9 +28,6 @@
 package mage.sets.mercadianmasques;
 
 import java.util.UUID;
-
-import mage.constants.CardType;
-import mage.constants.Rarity;
 import mage.Mana;
 import mage.abilities.Ability;
 import mage.abilities.common.SimpleActivatedAbility;
@@ -42,6 +39,8 @@ import mage.abilities.effects.common.ManaEffect;
 import mage.abilities.effects.common.counter.AddCountersSourceEffect;
 import mage.abilities.mana.BasicManaAbility;
 import mage.cards.CardImpl;
+import mage.constants.CardType;
+import mage.constants.Rarity;
 import mage.constants.Zone;
 import mage.counters.CounterType;
 import mage.game.Game;
@@ -61,8 +60,8 @@ public class KyrenToy extends CardImpl {
         Ability ability = new SimpleActivatedAbility(Zone.BATTLEFIELD, new AddCountersSourceEffect(CounterType.CHARGE.createInstance(1)), new GenericManaCost(1));
         ability.addCost(new TapSourceCost());
         this.addAbility(ability);
-        
-        // {T}, Remove X charge counters from Kyren Toy: Add {X}{1} to your mana pool.
+
+        // {T}, Remove X charge counters from Kyren Toy: Add X mana of {C} to your mana pool, and then add {C} to your mana pool.
         ability = new KyrenToyManaAbility();
         ability.addCost(new RemoveVariableCountersSourceCost(CounterType.CHARGE.createInstance(1)));
         this.addAbility(ability);
@@ -76,8 +75,9 @@ public class KyrenToy extends CardImpl {
     public KyrenToy copy() {
         return new KyrenToy(this);
     }
-    
+
     private class KyrenToyManaAbility extends BasicManaAbility {
+
         KyrenToyManaAbility() {
             super(new KyrenToyManaEffect());
         }
@@ -90,13 +90,13 @@ public class KyrenToy extends CardImpl {
         public KyrenToyManaAbility copy() {
             return new KyrenToyManaAbility(this);
         }
-}
+    }
 
     private class KyrenToyManaEffect extends ManaEffect {
 
         KyrenToyManaEffect() {
             super();
-            staticText = "Add {X}{1} to your mana pool";
+            staticText = "Add X mana of {C} to your mana pool, and then add {C} to your mana pool";
         }
 
         KyrenToyManaEffect(final KyrenToyManaEffect effect) {
@@ -111,10 +111,10 @@ public class KyrenToy extends CardImpl {
                 int numberOfMana = 0;
                 for (Cost cost : source.getCosts()) {
                     if (cost instanceof RemoveVariableCountersSourceCost) {
-                        numberOfMana = ((RemoveVariableCountersSourceCost)cost).getAmount();
+                        numberOfMana = ((RemoveVariableCountersSourceCost) cost).getAmount();
                     }
                 }
-                Mana mana = new Mana(0, 0, 0, 0, 0, numberOfMana + 1, 0);
+                Mana mana = new Mana(0, 0, 0, 0, 0, 0, 0, numberOfMana + 1);
                 checkToFirePossibleEvents(mana, game, source);
                 player.getManaPool().addMana(mana, game, source);
                 return true;
@@ -131,5 +131,5 @@ public class KyrenToy extends CardImpl {
         public KyrenToyManaEffect copy() {
             return new KyrenToyManaEffect(this);
         }
-    }    
+    }
 }

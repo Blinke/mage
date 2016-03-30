@@ -25,7 +25,6 @@
  *  authors and should not be interpreted as representing official policies, either expressed
  *  or implied, of BetaSteward_at_googlemail.com.
  */
-
 package mage.game;
 
 import java.util.HashSet;
@@ -35,7 +34,6 @@ import mage.MageInt;
 import mage.abilities.Ability;
 import mage.abilities.common.SimpleStaticAbility;
 import mage.abilities.effects.common.InfoEffect;
-import mage.abilities.effects.common.continuous.CommanderManaReplacementEffect;
 import mage.abilities.effects.common.continuous.CommanderReplacementEffect;
 import mage.abilities.effects.common.cost.CommanderCostModification;
 import mage.cards.Card;
@@ -50,15 +48,14 @@ import mage.constants.Rarity;
 import mage.constants.Zone;
 import mage.game.turn.TurnMod;
 import mage.players.Player;
-import mage.util.CardUtil;
 import mage.watchers.common.CommanderInfoWatcher;
 
 /**
  *
  * @author JRHerlehy
  */
-public abstract class GameTinyLeadersImpl extends GameImpl{
-    
+public abstract class GameTinyLeadersImpl extends GameImpl {
+
     protected boolean alsoHand; // replace also commander going to library
     protected boolean alsoLibrary; // replace also commander going to library
     protected boolean startingPlayerSkipsDraw = true;
@@ -72,14 +69,14 @@ public abstract class GameTinyLeadersImpl extends GameImpl{
         this.alsoHand = game.alsoHand;
         this.startingPlayerSkipsDraw = game.startingPlayerSkipsDraw;
     }
-    
+
     @Override
     protected void init(UUID choosingPlayerId) {
         Ability ability = new SimpleStaticAbility(Zone.COMMAND, new InfoEffect("Commander effects"));
         //Move tiny leader to command zone
-        for (UUID playerId: state.getPlayerList(startingPlayerId)) {
+        for (UUID playerId : state.getPlayerList(startingPlayerId)) {
             Player player = getPlayer(playerId);
-            if (player != null){
+            if (player != null) {
                 Card commander = getCommanderCard(player.getMatchPlayer().getDeck().getName(), player.getId());
                 if (commander != null) {
                     Set<Card> cards = new HashSet<>();
@@ -89,13 +86,14 @@ public abstract class GameTinyLeadersImpl extends GameImpl{
                     commander.moveToZone(Zone.COMMAND, null, this, true);
                     ability.addEffect(new CommanderReplacementEffect(commander.getId(), alsoHand, alsoLibrary));
                     ability.addEffect(new CommanderCostModification(commander.getId()));
-                    ability.addEffect(new CommanderManaReplacementEffect(player.getId(), CardUtil.getColorIdentity(commander)));
+                    // Commander rule #4 was removed Jan. 18, 2016
+                    // ability.addEffect(new CommanderManaReplacementEffect(player.getId(), CardUtil.getColorIdentity(commander)));
                     getState().setValue(commander.getId() + "_castCount", 0);
                     CommanderInfoWatcher watcher = new CommanderInfoWatcher(commander.getId(), false);
                     getState().getWatchers().add(watcher);
                     watcher.addCardInfoToCommander(this);
                 } else {
-                    throw new UnknownError("Commander card could not be created. Name: [" + player.getMatchPlayer().getDeck().getName() +"]");
+                    throw new UnknownError("Commander card could not be created. Name: [" + player.getMatchPlayer().getDeck().getName() + "]");
                 }
             }
 
@@ -109,16 +107,14 @@ public abstract class GameTinyLeadersImpl extends GameImpl{
 
     /**
      * Name of Tiny Leader comes from the deck name (it's not in the sideboard)
-     * Additionally, it was taken into account that WOTC had missed a few color combinations
-     * when making Legendary Creatures at 3 CMC. There are three Commanders available to use 
-     * for the missing color identities: 
-     *  Mardu [WBR 2/2], 
-     *  Sultai [UBG 2/2], and 
-     *  Jeskai [WUR 2/2]. 
+     * Additionally, it was taken into account that WOTC had missed a few color
+     * combinations when making Legendary Creatures at 3 CMC. There are two
+     * Commanders available to use for the missing color identities: Sultai [UBG
+     * 3/3] and Glass [colorless 3/3]
      *
      * @param commanderName
      * @param ownerId
-     * @return 
+     * @return
      */
     public static Card getCommanderCard(String commanderName, UUID ownerId) {
         Card commander = null;
@@ -126,6 +122,9 @@ public abstract class GameTinyLeadersImpl extends GameImpl{
             switch (commanderName) {
                 case "Sultai":
                     commander = new DefaultCommander(ownerId, commanderName, "{U}{B}{G}");
+                    break;
+                case "Glass":
+                    commander = new DefaultCommander(ownerId, commanderName, "{C}{C}{C}");
                     break;
                 default:
                     CardInfo cardInfo = CardRepository.instance.findCard(commanderName);
@@ -140,7 +139,7 @@ public abstract class GameTinyLeadersImpl extends GameImpl{
     @Override
     public Set<UUID> getOpponents(UUID playerId) {
         Set<UUID> opponents = new HashSet<>();
-        for (UUID opponentId: this.getPlayer(playerId).getInRange()) {
+        for (UUID opponentId : getState().getPlayersInRange(playerId, this)) {
             if (!opponentId.equals(playerId)) {
                 opponents.add(opponentId);
             }
@@ -150,7 +149,7 @@ public abstract class GameTinyLeadersImpl extends GameImpl{
 
     @Override
     public boolean isOpponent(Player player, UUID playerToCheck) {
-       return !player.getId().equals(playerToCheck);
+        return !player.getId().equals(playerToCheck);
     }
 
     public void setAlsoHand(boolean alsoHand) {
@@ -184,8 +183,8 @@ class DefaultCommander extends CardImpl {
         if (manaString.contains("{R}")) {
             this.color.setRed(true);
         }
-        this.power = new MageInt(2);
-        this.toughness = new MageInt(2);
+        this.power = new MageInt(3);
+        this.toughness = new MageInt(3);
 
     }
 

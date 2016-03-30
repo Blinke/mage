@@ -29,19 +29,15 @@
 package mage.sets.championsofkamigawa;
 
 import java.util.UUID;
-import mage.constants.CardType;
-import mage.constants.Outcome;
-import mage.constants.Rarity;
 import mage.MageInt;
 import mage.abilities.Ability;
 import mage.abilities.common.DiesTriggeredAbility;
-import mage.abilities.effects.OneShotEffect;
+import mage.abilities.effects.common.counter.DistributeCountersEffect;
 import mage.abilities.keyword.FlyingAbility;
 import mage.cards.CardImpl;
+import mage.constants.CardType;
+import mage.constants.Rarity;
 import mage.counters.CounterType;
-import mage.game.Game;
-import mage.game.permanent.Permanent;
-import mage.target.Target;
 import mage.target.common.TargetCreaturePermanentAmount;
 
 /**
@@ -62,7 +58,7 @@ public class JuganTheRisingStar extends CardImpl {
         // Flying
         this.addAbility(FlyingAbility.getInstance());
         // When Jugan, the Rising Star dies, you may distribute five +1/+1 counters among any number of target creatures.
-        Ability ability = new DiesTriggeredAbility(new JuganTheRisingStarMultiEffect(), true);
+        Ability ability = new DiesTriggeredAbility(new DistributeCountersEffect(CounterType.P1P1, 5, false, "any number of target creatures"), true);
         ability.addTarget(new TargetCreaturePermanentAmount(5));
         this.addAbility(ability);
     }
@@ -74,38 +70,6 @@ public class JuganTheRisingStar extends CardImpl {
     @Override
     public JuganTheRisingStar copy() {
         return new JuganTheRisingStar(this);
-    }
-
-}
-
-class JuganTheRisingStarMultiEffect extends OneShotEffect {
-
-    public JuganTheRisingStarMultiEffect() {
-        super(Outcome.BoostCreature);
-                this.staticText = "distribute five +1/+1 counters among any number of target creatures";
-    }
-
-    public JuganTheRisingStarMultiEffect(final JuganTheRisingStarMultiEffect effect) {
-        super(effect);
-    }
-
-    @Override
-    public JuganTheRisingStarMultiEffect copy() {
-        return new JuganTheRisingStarMultiEffect(this);
-    }
-
-    @Override
-    public boolean apply(Game game, Ability source) {
-                if (source.getTargets().size() > 0) {
-                    Target multiTarget = source.getTargets().get(0);
-                    for (UUID target: multiTarget.getTargets()) {
-                        Permanent permanent = game.getPermanent(target);
-                        if (permanent != null) {
-                            permanent.addCounters(CounterType.P1P1.createInstance(multiTarget.getTargetAmount(target)), game);
-                        }
-                    }
-                }
-        return true;
     }
 
 }

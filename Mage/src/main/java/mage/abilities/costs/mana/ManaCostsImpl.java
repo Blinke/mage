@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.UUID;
 import mage.Mana;
 import mage.abilities.Ability;
+import mage.abilities.costs.Cost;
 import mage.abilities.costs.VariableCost;
 import mage.abilities.mana.ManaOptions;
 import mage.constants.ColoredManaSymbol;
@@ -121,19 +122,24 @@ public class ManaCostsImpl<T extends ManaCost> extends ArrayList<T> implements M
 
     @Override
     public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana) {
-        if (this.size() == 0 || noMana) {
+        return pay(ability, game, sourceId, controllerId, noMana, this);
+    }
+
+    @Override
+    public boolean pay(Ability ability, Game game, UUID sourceId, UUID controllerId, boolean noMana, Cost costToPay) {
+        if (this.isEmpty() || noMana) {
             setPaid();
             return true;
         }
 
         Player player = game.getPlayer(controllerId);
-        assignPayment(game, ability, player.getManaPool());
+        assignPayment(game, ability, player.getManaPool(), this);
         game.getState().getSpecialActions().removeManaActions();
         while (!isPaid()) {
             ManaCost unpaid = this.getUnpaid();
             String promptText = ManaUtil.addSpecialManaPayAbilities(ability, game, unpaid);
             if (player.playMana(ability, unpaid, promptText, game)) {
-                assignPayment(game, ability, player.getManaPool());
+                assignPayment(game, ability, player.getManaPool(), this);
             } else {
                 return false;
             }
@@ -155,7 +161,7 @@ public class ManaCostsImpl<T extends ManaCost> extends ArrayList<T> implements M
     @Override
     public boolean payOrRollback(Ability ability, Game game, UUID sourceId, UUID payingPlayerId) {
         int bookmark = game.bookmarkState();
-        if (pay(ability, game, sourceId, payingPlayerId, false)) {
+        if (pay(ability, game, sourceId, payingPlayerId, false, null)) {
             game.removeBookmark(bookmark);
             return true;
         }
@@ -219,16 +225,24 @@ public class ManaCostsImpl<T extends ManaCost> extends ArrayList<T> implements M
     }
 
     @Override
-    public void assignPayment(Game game, Ability ability, ManaPool pool) {
+    public void assignPayment(Game game, Ability ability, ManaPool pool, Cost costToPay) {
         if (!pool.isAutoPayment() && pool.getUnlockedManaType() == null) {
             // if auto payment is inactive and no mana type was clicked manually - do nothing
             return;
         }
-
+        // attempt to pay colorless costs (not generic) mana costs first
+        for (ManaCost cost : this) {
+            if (!cost.isPaid() && cost instanceof ColorlessManaCost) {
+                cost.assignPayment(game, ability, pool, costToPay);
+                if (pool.count() == 0) {
+                    return;
+                }
+            }
+        }
         //attempt to pay colored costs first
         for (ManaCost cost : this) {
             if (!cost.isPaid() && cost instanceof ColoredManaCost) {
-                cost.assignPayment(game, ability, pool);
+                cost.assignPayment(game, ability, pool, costToPay);
                 if (pool.count() == 0) {
                     return;
                 }
@@ -237,7 +251,7 @@ public class ManaCostsImpl<T extends ManaCost> extends ArrayList<T> implements M
 
         for (ManaCost cost : this) {
             if (!cost.isPaid() && cost instanceof HybridManaCost) {
-                cost.assignPayment(game, ability, pool);
+                cost.assignPayment(game, ability, pool, costToPay);
                 if (pool.count() == 0) {
                     return;
                 }
@@ -253,7 +267,7 @@ public class ManaCostsImpl<T extends ManaCost> extends ArrayList<T> implements M
                         || ((((MonoHybridManaCost) cost).containsColor(ColoredManaSymbol.R)) && pool.getRed() > 0)
                         || ((((MonoHybridManaCost) cost).containsColor(ColoredManaSymbol.G)) && pool.getGreen() > 0)
                         || ((((MonoHybridManaCost) cost).containsColor(ColoredManaSymbol.U)) && pool.getBlue() > 0)) {
-                    cost.assignPayment(game, ability, pool);
+                    cost.assignPayment(game, ability, pool, costToPay);
                     if (pool.count() == 0) {
                         return;
                     }
@@ -263,7 +277,7 @@ public class ManaCostsImpl<T extends ManaCost> extends ArrayList<T> implements M
         // if colored didn't fit pay colorless with the mana
         for (ManaCost cost : this) {
             if (!cost.isPaid() && cost instanceof MonoHybridManaCost) {
-                cost.assignPayment(game, ability, pool);
+                cost.assignPayment(game, ability, pool, costToPay);
                 if (pool.count() == 0) {
                     return;
                 }
@@ -272,7 +286,7 @@ public class ManaCostsImpl<T extends ManaCost> extends ArrayList<T> implements M
 
         for (ManaCost cost : this) {
             if (!cost.isPaid() && cost instanceof SnowManaCost) {
-                cost.assignPayment(game, ability, pool);
+                cost.assignPayment(game, ability, pool, costToPay);
                 if (pool.count() == 0) {
                     return;
                 }
@@ -281,7 +295,7 @@ public class ManaCostsImpl<T extends ManaCost> extends ArrayList<T> implements M
 
         for (ManaCost cost : this) {
             if (!cost.isPaid() && cost instanceof GenericManaCost) {
-                cost.assignPayment(game, ability, pool);
+                cost.assignPayment(game, ability, pool, costToPay);
                 if (pool.count() == 0) {
                     return;
                 }
@@ -290,7 +304,7 @@ public class ManaCostsImpl<T extends ManaCost> extends ArrayList<T> implements M
 
         for (ManaCost cost : this) {
             if (!cost.isPaid() && cost instanceof VariableManaCost) {
-                cost.assignPayment(game, ability, pool);
+                cost.assignPayment(game, ability, pool, costToPay);
             }
         }
         // stop using mana of the clicked mana type
@@ -315,35 +329,29 @@ public class ManaCostsImpl<T extends ManaCost> extends ArrayList<T> implements M
                 if (symbol.length() > 0) {
                     if (symbol.length() == 1 || isNumeric(symbol)) {
                         if (Character.isDigit(symbol.charAt(0))) {
-                            this.add((T) new GenericManaCost(Integer.valueOf(symbol)));
-                        } else {
-                            if(symbol.equals("S")) {
-                                this.add((T) new SnowManaCost());
-                            }
-                            else if (!symbol.equals("X")) {
-                                this.add((T) new ColoredManaCost(ColoredManaSymbol.lookup(symbol.charAt(0))));
-                            } else {
-                                // check X wasn't added before
-                                if (modifierForX == 0) {
-                                    // count X occurence
-                                    for (String s : symbols) {
-                                        if (s.equals("X")) {
-                                            modifierForX++;
-                                        }
-                                    }
-                                    this.add((T) new VariableManaCost(modifierForX));
+                            this.add(new GenericManaCost(Integer.valueOf(symbol)));
+                        } else if (symbol.equals("S")) {
+                            this.add(new SnowManaCost());
+                        } else if (symbol.equals("C")) {
+                            this.add(new ColorlessManaCost(1));
+                        } else if (!symbol.equals("X")) {
+                            this.add(new ColoredManaCost(ColoredManaSymbol.lookup(symbol.charAt(0))));
+                        } else // check X wasn't added before
+                        if (modifierForX == 0) {
+                            // count X occurence
+                            for (String s : symbols) {
+                                if (s.equals("X")) {
+                                    modifierForX++;
                                 }
                             }
-                            //TODO: handle multiple {X} and/or {Y} symbols
-                        }
+                            this.add(new VariableManaCost(modifierForX));
+                        } //TODO: handle multiple {X} and/or {Y} symbols
+                    } else if (Character.isDigit(symbol.charAt(0))) {
+                        this.add((T) new MonoHybridManaCost(ColoredManaSymbol.lookup(symbol.charAt(2))));
+                    } else if (symbol.contains("P")) {
+                        this.add((T) new PhyrexianManaCost(ColoredManaSymbol.lookup(symbol.charAt(0))));
                     } else {
-                        if (Character.isDigit(symbol.charAt(0))) {
-                            this.add((T) new MonoHybridManaCost(ColoredManaSymbol.lookup(symbol.charAt(2))));
-                        } else if (symbol.contains("P")) {
-                            this.add((T) new PhyrexianManaCost(ColoredManaSymbol.lookup(symbol.charAt(0))));
-                        } else {
-                            this.add((T) new HybridManaCost(ColoredManaSymbol.lookup(symbol.charAt(0)), ColoredManaSymbol.lookup(symbol.charAt(2))));
-                        }
+                        this.add((T) new HybridManaCost(ColoredManaSymbol.lookup(symbol.charAt(0)), ColoredManaSymbol.lookup(symbol.charAt(2))));
                     }
                 }
             }

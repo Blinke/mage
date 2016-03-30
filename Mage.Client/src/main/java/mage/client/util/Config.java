@@ -24,10 +24,8 @@
 * The views and conclusions contained in the software and documentation are those of the
 * authors and should not be interpreted as representing official policies, either expressed
 * or implied, of BetaSteward_at_googlemail.com.
-*/
-
+ */
 package mage.client.util;
-
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -42,6 +40,7 @@ import org.apache.log4j.Logger;
  */
 public class Config {
 
+    // TODO: Remove this class completely
     private static final Logger logger = Logger.getLogger(Config.class);
 
     public static final String remoteServer;
@@ -82,9 +81,9 @@ public class Config {
 //        serverName = "localhost";
 //        port = 17171;
 //        remoteServer = "mage-server";
-//        cardScalingFactor = Double.valueOf(0.4);
-//        cardScalingFactorEnlarged = Double.valueOf(0.5);
-//        handScalingFactor = Double.valueOf(1.3);
+//        cardScalingFactor = 0.4;
+//        cardScalingFactorEnlarged = 0.5;
+//        handScalingFactor = 1.3;
 //        defaultGameType = p.getProperty("default-game-type", "Human");
 //        defaultDeckPath = "";
 //        defaultOtherPlayerIndex = "1";

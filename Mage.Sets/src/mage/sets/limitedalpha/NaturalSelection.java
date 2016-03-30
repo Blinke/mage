@@ -28,7 +28,6 @@
 package mage.sets.limitedalpha;
 
 import java.util.UUID;
-
 import mage.abilities.Ability;
 import mage.abilities.effects.OneShotEffect;
 import mage.cards.Card;
@@ -95,19 +94,18 @@ class  NaturalSelectionEffect extends OneShotEffect {
         if (player == null || you == null) {
             return false;
         }
-        Cards cards = new CardsImpl(Zone.PICK);
+        Cards cards = new CardsImpl();
         int count = Math.min(player.getLibrary().size(), 3);
         for (int i = 0; i < count; i++) {
             Card card = player.getLibrary().removeFromTop(game);
             if (card != null) {
                 cards.add(card);
-                game.setZone(card.getId(), Zone.PICK);
             }
         }
 
         you.lookAtCards("Natural Selection", cards, game);
 
-        TargetCard target = new TargetCard(Zone.PICK, new FilterCard("card to put on the top of target player's library"));
+        TargetCard target = new TargetCard(Zone.LIBRARY, new FilterCard("card to put on the top of target player's library"));
         while (player.canRespond() && cards.size() > 1) {
             you.choose(Outcome.Neutral, cards, target, game);
             Card card = cards.get(target.getFirstTarget(), game);
@@ -122,7 +120,7 @@ class  NaturalSelectionEffect extends OneShotEffect {
             card.moveToZone(Zone.LIBRARY, source.getSourceId(), game, true);
         }
         if (you.chooseUse(Outcome.Neutral, "You may have that player shuffle his or her library", source, game)){
-            player.shuffleLibrary(game);
+            player.shuffleLibrary(source, game);
         }
         return true;
     }

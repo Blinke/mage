@@ -26,7 +26,7 @@
  * or implied, of BetaSteward_at_googlemail.com.
  */
 
-/*
+ /*
  * PlayerPanel.java
  *
  * Created on Nov 18, 2009, 3:01:31 PM
@@ -102,9 +102,10 @@ public class PlayerPanelExt extends javax.swing.JPanel {
     private static final int PANEL_HEIGHT_SMALL = 212;
     private static final int MANA_LABEL_SIZE_HORIZONTAL = 20;
 
-    private static final Border greenBorder = new LineBorder(Color.green, 3);
-    private static final Border redBorder = new LineBorder(Color.red, 2);
-    private static final Border emptyBorder = BorderFactory.createEmptyBorder(0, 0, 0, 0);
+    private static final Border GREEN_BORDER = new LineBorder(Color.green, 3);
+    private static final Border RED_BORDER = new LineBorder(Color.red, 2);
+    private static final Border EMPTY_BORDER = BorderFactory.createEmptyBorder(0, 0, 0, 0);
+    private final Color greenBackgroundColor = new Color(180, 255, 180, 200);
 
     private int avatarId = -1;
     private String flagName;
@@ -118,6 +119,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
     public PlayerPanelExt() {
         setPreferredSize(new Dimension(PANEL_WIDTH, PANEL_HEIGHT));
         initComponents();
+        setGUISize();
     }
 
     public void init(UUID gameId, UUID playerId, BigCard bigCard, int priorityTime) {
@@ -156,6 +158,14 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         if (timer != null) {
             this.timer.cancel();
         }
+    }
+
+    public void changeGUISize() {
+        setGUISize();
+    }
+
+    private void setGUISize() {
+
     }
 
     public void update(PlayerView player) {
@@ -257,17 +267,29 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         }
 
         if (player.isActive()) {
-            this.avatar.setBorder(greenBorder);
-            this.btnPlayer.setBorder(greenBorder);
-        } else if (player.hasLeft()) {
-            this.avatar.setBorder(redBorder);
-            this.btnPlayer.setBorder(redBorder);
+            this.avatar.setBorder(GREEN_BORDER);
+            this.btnPlayer.setBorder(GREEN_BORDER);
+            setGreenBackgroundColor();
         } else {
-            this.avatar.setBorder(emptyBorder);
-            this.btnPlayer.setBorder(emptyBorder);
+            resetBackgroundColor();
+            if (player.hasLeft()) {
+                this.avatar.setBorder(RED_BORDER);
+                this.btnPlayer.setBorder(RED_BORDER);
+            } else {
+                this.avatar.setBorder(EMPTY_BORDER);
+                this.btnPlayer.setBorder(EMPTY_BORDER);
+            }
         }
 
         update(player.getManaPool());
+    }
+
+    private void resetBackgroundColor() {
+        panelBackground.resetBackgroundColor();
+    }
+
+    private void setGreenBackgroundColor() {
+        panelBackground.setBackgroundColor(greenBackgroundColor);
     }
 
     /**
@@ -278,7 +300,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             avatar.setText(this.player.getName());
             if (!player.getUserData().getFlagName().equals(flagName)) {
                 flagName = player.getUserData().getFlagName();
-                this.avatar.setTopTextImage(CountryUtil.getCountryFlagIcon(flagName).getImage());
+                this.avatar.setTopTextImage(CountryUtil.getCountryFlagIconSize(flagName, 11).getImage());
             }
             // TODO: Add the wins to the tooltiptext of the avatar
             String countryname = CountryUtil.getCountryName(flagName);
@@ -288,7 +310,8 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             basicTooltipText = "<HTML>Name: " + player.getName()
                     + "<br/>Country: " + countryname
                     + "<br/>Deck hash code: " + player.getDeckHashCode()
-                    + "<br/>Wins: " + player.getWins() + " of " + player.getWinsNeeded() + " (to win the match)";
+                    + "<br/>This match wins: " + player.getWins() + " of " + player.getWinsNeeded() + " (to win the match)"
+                    + (player.getUserData() == null ? "" : "<br/>History: " + player.getUserData().getHistory());
         }
         // Extend tooltip
         StringBuilder tooltipText = new StringBuilder(basicTooltipText);
@@ -464,6 +487,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         zonesPanel.setPreferredSize(new Dimension(100, 20));
         zonesPanel.setSize(100, 20);
         zonesPanel.setLayout(null);
+        zonesPanel.setOpaque(false);
 
         image = ImageHelper.getImageFromResources("/info/command_zone.png");
         r = new Rectangle(21, 21);
@@ -500,7 +524,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         manaCountLabelW.setText("0");
         manaLabels.put("W", manaCountLabelW);
         r = new Rectangle(12, 12);
-        BufferedImage imageManaW = ManaSymbols.getManaSymbolImageSmall("W");
+        BufferedImage imageManaW = ManaSymbols.getSizedManaSymbol("W");
         HoverButton btnWhiteMana = new HoverButton(null, imageManaW, imageManaW, imageManaW, r);
         btnWhiteMana.setToolTipText("White mana");
         btnWhiteMana.setOpaque(false);
@@ -516,7 +540,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         manaCountLabelU.setText("0");
         manaLabels.put("U", manaCountLabelU);
         r = new Rectangle(12, 12);
-        BufferedImage imageManaU = ManaSymbols.getManaSymbolImageSmall("U");
+        BufferedImage imageManaU = ManaSymbols.getSizedManaSymbol("U");
         HoverButton btnBlueMana = new HoverButton(null, imageManaU, imageManaU, imageManaU, r);
         btnBlueMana.setToolTipText("Blue mana");
         btnBlueMana.setOpaque(false);
@@ -532,7 +556,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         manaCountLabelB.setText("0");
         manaLabels.put("B", manaCountLabelB);
         r = new Rectangle(12, 12);
-        BufferedImage imageManaB = ManaSymbols.getManaSymbolImageSmall("B");
+        BufferedImage imageManaB = ManaSymbols.getSizedManaSymbol("B");
         HoverButton btnBlackMana = new HoverButton(null, imageManaB, imageManaB, imageManaB, r);
         btnBlackMana.setToolTipText("Black mana");
         btnBlackMana.setOpaque(false);
@@ -548,7 +572,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         manaCountLabelR.setText("0");
         manaLabels.put("R", manaCountLabelR);
         r = new Rectangle(12, 12);
-        BufferedImage imageManaR = ManaSymbols.getManaSymbolImageSmall("R");
+        BufferedImage imageManaR = ManaSymbols.getSizedManaSymbol("R");
         HoverButton btnRedMana = new HoverButton(null, imageManaR, imageManaR, imageManaR, r);
         btnRedMana.setToolTipText("Red mana");
         btnRedMana.setOpaque(false);
@@ -564,7 +588,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         manaCountLabelG.setText("0");
         manaLabels.put("G", manaCountLabelG);
         r = new Rectangle(12, 12);
-        BufferedImage imageManaG = ManaSymbols.getManaSymbolImageSmall("G");
+        BufferedImage imageManaG = ManaSymbols.getSizedManaSymbol("G");
         HoverButton btnGreenMana = new HoverButton(null, imageManaG, imageManaG, imageManaG, r);
         btnGreenMana.setToolTipText("Green mana");
         btnGreenMana.setOpaque(false);
@@ -580,7 +604,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         manaCountLabelX.setText("0");
         manaLabels.put("X", manaCountLabelX);
         r = new Rectangle(12, 12);
-        BufferedImage imageManaX = ManaSymbols.getManaSymbolImageSmall("X");
+        BufferedImage imageManaX = ManaSymbols.getSizedManaSymbol("C");
         HoverButton btnColorlessMana = new HoverButton(null, imageManaX, imageManaX, imageManaX, r);
         btnColorlessMana.setToolTipText("Colorless mana");
         btnColorlessMana.setOpaque(false);

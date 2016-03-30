@@ -24,7 +24,7 @@
 * The views and conclusions contained in the software and documentation are those of the
 * authors and should not be interpreted as representing official policies, either expressed
 * or implied, of BetaSteward_at_googlemail.com.
-*/
+ */
 package mage.view;
 
 import java.io.Serializable;
@@ -39,14 +39,21 @@ public class UsersView implements Serializable {
 
     private final String flagName;
     private final String userName;
-    private final String infoState;
+    private final String matchHistory;
+    private final int matchQuitRatio;
+    private final String tourneyHistory;
+    private final int tourneyQuitRatio;
     private final String infoGames;
     private final String infoPing;
 
-    public UsersView(String flagName, String userName, String infoState, String infoGames, String infoPing) {
+    public UsersView(String flagName, String userName, String matchHistory, int matchQuitRatio,
+            String tourneyHistory, int tourneyQuitRatio, String infoGames, String infoPing) {
         this.flagName = flagName;
+        this.matchHistory = matchHistory;
+        this.matchQuitRatio = matchQuitRatio;
+        this.tourneyHistory = tourneyHistory;
+        this.tourneyQuitRatio = tourneyQuitRatio;
         this.userName = userName;
-        this.infoState = infoState;
         this.infoGames = infoGames;
         this.infoPing = infoPing;
     }
@@ -59,8 +66,20 @@ public class UsersView implements Serializable {
         return userName;
     }
 
-    public String getInfoState() {
-        return infoState;
+    public String getMatchHistory() {
+        return matchHistory;
+    }
+
+    public int getMatchQuitRatio() {
+        return matchQuitRatio;
+    }
+
+    public String getTourneyHistory() {
+        return tourneyHistory;
+    }
+
+    public int getTourneyQuitRatio() {
+        return tourneyQuitRatio;
     }
 
     public String getInfoGames() {

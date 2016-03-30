@@ -100,7 +100,7 @@ class ManaChargedDragonEffect extends OneShotEffect {
             xValue = player.announceXMana(0, Integer.MAX_VALUE, "How much mana will you pay?", game, source);
             if (xValue > 0) {
                 Cost cost = new GenericManaCost(xValue);
-                payed = cost.pay(source, game, source.getSourceId(), player.getId(), false);
+                payed = cost.pay(source, game, source.getSourceId(), player.getId(), false, null);
             } else {
                 payed = true;
             }
@@ -129,7 +129,7 @@ class ManaChargedDragonEffect extends OneShotEffect {
         if (controller != null) {
             int xSum = 0;
             xSum += playerPaysXGenericMana(controller, source, game);
-            for (UUID playerId : controller.getInRange()) {
+            for (UUID playerId : game.getState().getPlayersInRange(controller.getId(), game)) {
                 if (playerId != controller.getId()) {
                     Player player = game.getPlayer(playerId);
                     if (player != null) {

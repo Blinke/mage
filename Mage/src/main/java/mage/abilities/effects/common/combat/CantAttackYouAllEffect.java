@@ -45,13 +45,13 @@ public class CantAttackYouAllEffect extends RestrictionEffect {
     private final FilterCreaturePermanent filterAttacker;
 
     public CantAttackYouAllEffect(Duration duration) {
-        this(duration, new FilterCreaturePermanent());
+        this(duration, new FilterCreaturePermanent("creatures"));
     }
 
     public CantAttackYouAllEffect(Duration duration, FilterCreaturePermanent filter) {
         super(duration, Outcome.Benefit);
         this.filterAttacker = filter;
-        staticText = "Creatures can't attack you";
+        staticText = filterAttacker.getMessage() + " can't attack you";
     }
 
     CantAttackYouAllEffect(final CantAttackYouAllEffect effect) {
@@ -65,7 +65,7 @@ public class CantAttackYouAllEffect extends RestrictionEffect {
     }
 
     @Override
-    public boolean canAttack(UUID defenderId, Ability source, Game game) {
+    public boolean canAttack(Permanent attacker, UUID defenderId, Ability source, Game game) {
         return !defenderId.equals(source.getControllerId());
     }
 
